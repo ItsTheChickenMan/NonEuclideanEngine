@@ -4,9 +4,147 @@
 
 #include <glad/glad.h>
 #include <iostream>
+#include <string>
 
 // default max texture units (none)
 int32_t Knee::ShaderProgram::m_maxTextureUnits = 0;
+
+// vertex attributes
+const std::string Knee::VertexData::VA_POSITION_STR = "p";
+const std::string Knee::VertexData::VA_TEXCOORD_STR = "t";
+const std::string Knee::VertexData::VA_NORMAL_STR = "n";
+
+const uint32_t Knee::VertexData::VA_POSITION_SIZE = 3;
+const uint32_t Knee::VertexData::VA_TEXCOORD_SIZE = 2;
+const uint32_t Knee::VertexData::VA_NORMAL_SIZE = 3;
+
+const uint32_t Knee::VertexData::VA_POSITION_INDEX = 0;
+const uint32_t Knee::VertexData::VA_TEXCOORD_INDEX = 1;
+const uint32_t Knee::VertexData::VA_NORMAL_INDEX = 2;
+
+// dataOrder is used to specify the presence and order of vertex positions, texture coordinates, and normals in vertex data.
+// vertex positions are assumed to have 3 components, texture coordinates assumed to have 2, and normals assumed to have 3.
+// ex.	"p" = position only, 3-component vertex data
+//			"pt" = position then texture coordinates, 5-component vertex data
+//			"tp" = texture coordinates then position
+//			"pnt" = position, normals, texture coordinates
+// the indices of attributes in shaders will always map 0 to position, 1 to texture coordinates, and 2 to normals
+Knee::VertexData::VertexData(float* data, uint32_t vertexCount, GLsizeiptr dataSize, std::string attributeOrder) : m_vertexCount(vertexCount) {
+	// create vertex buffer object
+	glGenBuffers(1, &this->m_vbo);
+	
+	// bind buffer to copy data
+	glBindBuffer(GL_ARRAY_BUFFER, this->m_vbo);
+	
+	// copy data
+	glBufferData(GL_ARRAY_BUFFER, dataSize, data, GL_STATIC_DRAW);
+	
+	// create vertex array object
+	glGenVertexArrays(1, &this->m_vao);
+	
+	// bind vertex array for modification
+	glBindVertexArray(this->m_vao);
+	
+	// create vertex attribute pointers
+	size_t positionIndex = attributeOrder.find(Knee::VertexData::VA_POSITION_STR);
+	size_t texCoordIndex = attributeOrder.find(Knee::VertexData::VA_TEXCOORD_STR);
+	size_t normalIndex = attributeOrder.find(Knee::VertexData::VA_NORMAL_STR);
+	
+	bool hasPositions = positionIndex != std::string::npos;
+	bool hasTexCoords = texCoordIndex != std::string::npos;
+	bool hasNormals = normalIndex != std::string::npos;
+	
+	uint32_t positionSize = hasPositions ? Knee::VertexData::VA_POSITION_SIZE : 0;
+	uint32_t texCoordSize = hasTexCoords ? Knee::VertexData::VA_TEXCOORD_SIZE : 0;
+	uint32_t normalSize = hasNormals ? Knee::VertexData::VA_NORMAL_SIZE : 0;
+	
+	// vertex position pointer
+	if(hasPositions){
+		uint32_t stride = texCoordSize + normalSize;
+		uint32_t offset = 0;
+		
+		if(positionIndex == 0){
+			offset = 0;
+		} else if(positionIndex == 2){
+			offset = stride;
+		} else {
+			if(hasTexCoords && texCoordIndex == 0){
+				offset = texCoordSize;
+			} else {
+				offset = normalSize;
+			}
+		}
+		
+		glEnableVertexAttribArray(Knee::VertexData::VA_POSITION_INDEX);
+		
+		glVertexAttribPointer(Knee::VertexData::VA_POSITION_INDEX, Knee::VertexData::VA_POSITION_SIZE, GL_FLOAT, GL_FALSE, stride * sizeof(float), (GLvoid*)(offset * sizeof(float)));
+	}
+	
+	// vertex tex coords pointer
+	if(hasTexCoords){
+		uint32_t stride = positionSize + normalSize;
+		uint32_t offset = 0;
+		
+		if(texCoordIndex == 0){
+			offset = 0;
+		} else if(texCoordIndex == 2){
+			offset = stride;
+		} else {
+			if(hasPositions && positionIndex == 0){
+				offset = positionSize;
+			} else {
+				offset = normalSize;
+			}
+		}
+		
+		glEnableVertexAttribArray(Knee::VertexData::VA_TEXCOORD_INDEX);
+		
+		glVertexAttribPointer(Knee::VertexData::VA_TEXCOORD_INDEX, Knee::VertexData::VA_TEXCOORD_SIZE, GL_FLOAT, GL_FALSE, stride * sizeof(float), (GLvoid*)(offset * sizeof(float)));
+	}
+
+	// vertex normals pointer
+	if(hasNormals){
+		uint32_t stride = positionSize + texCoordSize;
+		uint32_t offset = 0;
+		
+		if(normalIndex == 0){
+			offset = 0;
+		} else if(normalIndex == 2){
+			offset = stride;
+		} else {
+			if(hasPositions && positionIndex == 0){
+				offset = positionSize;
+			} else {
+				offset = texCoordSize;
+			}
+		}
+		
+		glEnableVertexAttribArray(Knee::VertexData::VA_NORMAL_INDEX);
+		
+		glVertexAttribPointer(Knee::VertexData::VA_NORMAL_INDEX, Knee::VertexData::VA_NORMAL_SIZE, GL_FLOAT, GL_FALSE, stride * sizeof(float), (GLvoid*)(offset * sizeof(float)));
+	}
+	
+	// unbind everything
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
+Knee::VertexData::~VertexData(){
+	// delete vbo
+	glDeleteBuffers(1, &this->m_vbo);
+	
+	// delete vao
+	glDeleteVertexArrays(1, &this->m_vao);
+}
+
+uint32_t Knee::VertexData::getVertexCount() const {
+	return this->m_vertexCount;
+}
+
+// use this vertex data for vertex attributes for all shader calls following (until another is used instead)
+void Knee::VertexData::use() const {
+	glBindVertexArray(this->m_vao);
+}
 
 // constructor
 Knee::ShaderProgram::ShaderProgram(){
@@ -32,14 +170,14 @@ void Knee::ShaderProgram::loadMaxTextureUnits(){
 // returns 0 upon success and -1 upon error
 int32_t Knee::ShaderProgram::attachShader(GLenum shaderType, std::string file){
 	// read shader source
-	char* contents;
+	char* contents = NULL;
 	
 	if(Knee::readFileToCharBuffer(file.c_str(), &contents) != 0){
 		std::cout << Knee::ERROR_PREFACE << "error reading shader contents: " << SDL_GetError() << std::endl;
 		
 		return -1;
 	}
-	
+
 	// create shader object
 	GLuint shader = glCreateShader(shaderType);
 	
@@ -64,7 +202,7 @@ int32_t Knee::ShaderProgram::attachShader(GLenum shaderType, std::string file){
 		if(!infoLog){
 			std::cout << Knee::ERROR_PREFACE << "There was a shader compilation error, but the info log is empty" << std::endl;
 		} else {
-			std::cout << Knee::ERROR_PREFACE << infoLog << std::endl;
+			std::cout << Knee::ERROR_PREFACE << (shaderType == GL_VERTEX_SHADER ? " GL_VERTEX_SHADER " : " GL_FRAGMENT_SHADER ") << infoLog << std::endl;
 			
 			delete[] infoLog;
 		}
@@ -205,3 +343,17 @@ GLint Knee::ShaderProgram::getUniformLocation(std::string name){
 	return this->m_uniforms[name];
 }
 
+void Knee::ShaderProgram::drawArrays(uint32_t count){
+	glDrawArrays(GL_TRIANGLES, 0, count);
+}
+
+void Knee::ShaderProgram::drawVertexData(const Knee::VertexData& vertexData){
+	// enable this shader
+	this->use();
+
+	// enable vertex data
+	vertexData.use();
+	
+	// draw arrays
+	this->drawArrays(vertexData.getVertexCount());
+}

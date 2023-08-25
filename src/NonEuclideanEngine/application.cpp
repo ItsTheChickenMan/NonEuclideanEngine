@@ -71,9 +71,8 @@ void Knee::Application::initialize(std::string title, uint32_t windowWidth, uint
 	// set viewport size
 	glViewport(0, 0, windowWidth, windowHeight);
 	
-	if(SDL_GL_SetSwapInterval(1) < 0){
-		std::cout << Knee::ERROR_PREFACE << "Couldn't enable vsync" << std::endl;
-	}
+	// enable vsync by default
+	this->setSwapInterval(1);
 	
 	// misc gl settings
 	glClearColor(0.3, 0.0, 0.0, 1.0);
@@ -90,25 +89,31 @@ void Knee::Application::quit(){
 	SDL_Quit();
 }
 
+// check if the event is an application level event and process it if it is.
+// returns 1 if the event was processed in some way, otherwise returns 0.
+int32_t Knee::Application::processApplicationEvent(SDL_Event event){
+	int32_t status = 0;
+	
+	switch(event.type) {
+		case SDL_QUIT:
+			this->m_shouldQuit = true;
+			status = 1;
+			break;
+	}
+	
+	return status;
+}
+
 void Knee::Application::processEvents(){
 	// event placeholder
 	SDL_Event event;
 	
 	while(SDL_PollEvent(&event)){
-		switch(event.type) {
-			case SDL_QUIT:
-				this->m_shouldQuit = true;
-				break;
-		}
+		this->processApplicationEvent(event);
 	}
 }
 
 void Knee::Application::updateWindow(){
-	// clear buffers
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-	
-	
 	// swap buffers
 	SDL_GL_SwapWindow(this->m_window);
 }
@@ -117,10 +122,49 @@ bool Knee::Application::shouldQuit(){
 	return this->m_shouldQuit;
 }
 
+int32_t Knee::Application::setSwapInterval(int32_t swapInterval){
+	if(SDL_GL_SetSwapInterval(swapInterval) < 0){
+		std::cout << Knee::ERROR_PREFACE << "There was an error setting the swap interval to " << swapInterval << std::endl;
+		
+		return -1;
+	}
+	
+	return 0;
+}
+
 // non euclidean application class definitions //
 
 Knee::NonEuclideanApplication::NonEuclideanApplication() : Application() {
 }
 
 Knee::NonEuclideanApplication::~NonEuclideanApplication(){
+	
+}
+
+void Knee::NonEuclideanApplication::processEvents(){
+	// event placeholder
+	SDL_Event event;
+	
+	while(SDL_PollEvent(&event)){
+		// first process as application level event
+		if(this->processApplicationEvent(event) != 0){
+			// don't bother processing if it was already handled
+			// TODO: might have to remove this if we want to do additional event handling but should be fine for now
+			continue;
+		}
+		
+		switch(event.type){
+			
+		}
+	}
+}
+
+void Knee::NonEuclideanApplication::update(){
+	// clear buffers
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+	
+	
+	// update buffer
+	this->updateWindow();
 }

@@ -13,10 +13,11 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
+#include <NonEuclideanEngine/game.hpp>
 #include <NonEuclideanEngine/shader.hpp>
 
 namespace Knee {
-	// class definitions
+	// pretty much just a shell class to get the window and events running properly, and for that reason has no game instance or shaders.
 	class Application {
 		// MEMBERS //
 		
@@ -40,14 +41,21 @@ namespace Knee {
 			void initialize(std::string, uint32_t, uint32_t);
 			void quit();
 			
-			void processEvents();
+			int32_t processApplicationEvent(SDL_Event);
+			virtual void processEvents();
 			void updateWindow();
 			
 			bool shouldQuit();
+			
+			int32_t setSwapInterval(int32_t);
+			
 	};
 	
 	class NonEuclideanApplication : public Application {
 		// MEMBERS //
+		
+		// game instance
+		Knee::Game m_game;
 		
 		// general shaders
 		ShaderProgram m_worldShader;
@@ -60,6 +68,7 @@ namespace Knee {
 			NonEuclideanApplication();
 			~NonEuclideanApplication();
 			
-			
+			void processEvents();
+			void update();
 	};
 }
