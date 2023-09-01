@@ -72,7 +72,7 @@ void Knee::Application::initialize(std::string title, uint32_t windowWidth, uint
 	glViewport(0, 0, windowWidth, windowHeight);
 	
 	// enable vsync by default
-	this->setSwapInterval(1);
+	this->setSwapInterval(0);
 	
 	// misc gl settings
 	glClearColor(0.3, 0.0, 0.0, 1.0);
@@ -132,9 +132,10 @@ int32_t Knee::Application::setSwapInterval(int32_t swapInterval){
 	return 0;
 }
 
+
 // non euclidean application class definitions //
 
-Knee::NonEuclideanApplication::NonEuclideanApplication() : Application() {
+Knee::NonEuclideanApplication::NonEuclideanApplication() : Knee::Application() {
 }
 
 Knee::NonEuclideanApplication::~NonEuclideanApplication(){

@@ -30,10 +30,6 @@ namespace Knee {
 		bool m_shouldQuit = false;
 		
 		// METHODS //
-		private:
-		
-		protected:
-		
 		public:
 			Application();
 			~Application();

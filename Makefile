@@ -30,11 +30,12 @@ ifeq ($(ENV),mingw)
 endif
 
 # obj formatting
-_OBJ=glad.o fileio.o shader.o application.o game.o main.o
+_OBJ=glad.o misc.o fileio.o shader.o application.o game.o main.o
 OBJ=$(patsubst %,$(OBJ_DIR)%,$(_OBJ))
 
 # object sources
 glad.o=$(SRC_DIR)NonEuclideanEngine/glad/glad.c $(INCLUDE_DIR)glad/glad.h
+misc.o=$(SRC_DIR)NonEuclideanEngine/misc.cpp $(INCLUDE_DIR)NonEuclideanEngine/misc.hpp
 fileio.o=$(SRC_DIR)NonEuclideanEngine/fileio.cpp $(INCLUDE_DIR)NonEuclideanEngine/fileio.hpp
 shader.o=$(SRC_DIR)NonEuclideanEngine/shader.cpp $(INCLUDE_DIR)NonEuclideanEngine/shader.hpp
 application.o=$(SRC_DIR)NonEuclideanEngine/application.cpp $(INCLUDE_DIR)NonEuclideanEngine/application.hpp
@@ -82,6 +83,7 @@ $(INSTALL_DIR)$(OUT): $(OBJ)
 # define obj prerequisites
 $(OBJ_DIR)glad.o: $(glad.o)
 
+$(OBJ_DIR)misc.o: $(misc.o)
 $(OBJ_DIR)fileio.o: $(fileio.o) $(HEADERDEPS)
 $(OBJ_DIR)shader.o: $(shader.o) $(HEADERDEPS)
 $(OBJ_DIR)application.o: $(application.o) $(HEADERDEPS)
