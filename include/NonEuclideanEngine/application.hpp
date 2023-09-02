@@ -14,27 +14,33 @@
 #include <SDL2/SDL_opengl.h>
 
 #include <NonEuclideanEngine/game.hpp>
-#include <NonEuclideanEngine/shader.hpp>
 
 namespace Knee {
 	// pretty much just a shell class to get the window and events running properly, and for that reason has no game instance or shaders.
 	class Application {
 		// MEMBERS //
 		
-		// window + opengl context
-		SDL_Window* m_window;
-		SDL_GLContext m_glContext;
+		protected:
 		
-		// if the application should quit
-		// up to the programmer to actually quit in response to this
-		bool m_shouldQuit = false;
+			// window features
+			std::string m_windowTitle;
+			uint32_t m_windowWidth;
+			uint32_t m_windowHeight;
+			
+			// window + opengl context
+			SDL_Window* m_window;
+			SDL_GLContext m_glContext;
+			
+			// if the application should quit
+			// up to the programmer to actually quit in response to this
+			bool m_shouldQuit = false;
 		
 		// METHODS //
 		public:
-			Application();
+			Application(std::string, uint32_t, uint32_t);
 			~Application();
 			
-			void initialize(std::string, uint32_t, uint32_t);
+			virtual void initialize();
 			void quit();
 			
 			int32_t processApplicationEvent(SDL_Event);
@@ -47,22 +53,29 @@ namespace Knee {
 			
 	};
 	
-	class NonEuclideanApplication : public Application {
+	class GameApplication : public Application {
 		// MEMBERS //
 		
 		// game instance
 		Knee::Game m_game;
 		
-		// general shaders
-		ShaderProgram m_worldShader;
+		// delta timer
+		Knee::DeltaTimer m_deltaTimer;
 		
-		// ne specific shaders
-		ShaderProgram m_portalShader;
+		// expected delta based on max fps (defaults to 60)
+		double m_expectedDelta = 1.0 / 60.0;
 		
 		public:
 			// METHODS //
-			NonEuclideanApplication();
-			~NonEuclideanApplication();
+			GameApplication(std::string, uint32_t, uint32_t);
+			~GameApplication();
+			
+			Knee::DeltaTimer* getDeltaTimer();
+			Knee::Game* getGameInstance();
+			
+			void initialize();
+			void setMaxFPS(uint32_t);
+			void throttleFPS(double);
 			
 			void processEvents();
 			void update();

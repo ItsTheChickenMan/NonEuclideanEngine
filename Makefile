@@ -30,7 +30,7 @@ ifeq ($(ENV),mingw)
 endif
 
 # obj formatting
-_OBJ=glad.o misc.o fileio.o shader.o application.o game.o main.o
+_OBJ=glad.o misc.o fileio.o shader.o game.o application.o main.o
 OBJ=$(patsubst %,$(OBJ_DIR)%,$(_OBJ))
 
 # object sources
@@ -47,9 +47,6 @@ LIB=$(patsubst %,-L%,$(LIB_DIRS))
 
 # lib includes
 LIBS=-lmingw32 -lSDL2main -lSDL2 -lopengl32
-
-# header dependencies
-HEADERDEPS=$(INCLUDE_DIR)NonEuclideanEngine/misc.hpp
 
 # compiler flags
 CXXFLAGS=-Werror -g
@@ -84,12 +81,12 @@ $(INSTALL_DIR)$(OUT): $(OBJ)
 $(OBJ_DIR)glad.o: $(glad.o)
 
 $(OBJ_DIR)misc.o: $(misc.o)
-$(OBJ_DIR)fileio.o: $(fileio.o) $(HEADERDEPS)
-$(OBJ_DIR)shader.o: $(shader.o) $(HEADERDEPS)
-$(OBJ_DIR)application.o: $(application.o) $(HEADERDEPS)
-$(OBJ_DIR)game.o: $(game.o) $(HEADERDEPS)
+$(OBJ_DIR)fileio.o: $(fileio.o)
+$(OBJ_DIR)shader.o: $(shader.o) $(fileio.o) $(misc.o) $(glad.o)
+$(OBJ_DIR)game.o: $(game.o) $(shader.o) $(misc.o)
+$(OBJ_DIR)application.o: $(application.o) $(game.o) $(shader.o) $(misc.o)
 
-$(OBJ_DIR)main.o: $(main.o) $(HEADERDEPS)
+$(OBJ_DIR)main.o: $(main.o) $(application.o) $(game.o) $(shader.o) $(misc.o)
 
 # obj rule
 $(OBJ):

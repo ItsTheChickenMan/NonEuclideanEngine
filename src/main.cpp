@@ -7,17 +7,16 @@
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <glm/gtx/string_cast.hpp>
-#include <glad/glad.h>
 #include <cmath>
 #include <cstdio>
 
 int main(int argc, char* argv[]){
-	Knee::NonEuclideanApplication app;
-	
 	uint32_t windowWidth = 1280;
 	uint32_t windowHeight = 720;
 	
-	app.initialize("NonEuclideanEngine Test", windowWidth, windowHeight);
+	Knee::GameApplication app("NonEuclideanEngine Test", windowWidth, windowHeight);
+	
+	app.initialize();
 	
 	// CREATE VERTEX DATA
 	float testRawVertexData[] = {
@@ -69,66 +68,50 @@ int main(int argc, char* argv[]){
 	
 	Knee::VertexData testVertexData(testRawVertexData, testSize, testSizeBytes, "p");
 	
-	// CREATE RENDERABLE OBJECT
-	Knee::RenderableObject renderableObject(&testVertexData);
+	uint32_t objects = argc < 2 ? 8 : atoi(argv[1]);
+	double radius = argc < 3 ? 4.0 : atof(argv[2]);
+	double angularSpacing = 2*3.1415 / objects;
+	double pulseMin = argc < 4 ? 1.0 : atof(argv[3]);
+	double pulseMax = argc < 5 ? pulseMin : atof(argv[4]);
+	double pulseRate = argc < 6 ? 1.0 : atof(argv[5]);
 	
-	// CREATE SHADER PROGRAM
-	Knee::RenderableObjectShaderProgram testShaderProgram( glm::radians(45.f), (float)windowWidth / (float)windowHeight, 0.1f, 100.f);
+	Knee::Game* game = app.getGameInstance();
 	
-	testShaderProgram.attachShader(GL_VERTEX_SHADER, "./NonEuclideanEngine/shaders/simpleprojection/simpleprojectionvertex.glsl");
-	testShaderProgram.attachShader(GL_FRAGMENT_SHADER, "./NonEuclideanEngine/shaders/simple/simplefragment.glsl");
+	for(uint32_t i = 0; i < objects; i++){
+		std::string id = std::to_string(i);
+		
+		game->addRenderableGameObject( id, new Knee::RenderableGameObject(&testVertexData) );
+		
+		game->getGameObject( id )->setPosition(glm::vec3(0, 0, 0));
+		game->getGameObject( id )->setRotation(glm::vec3(0, 0, 0));
+		game->getGameObject( id )->setMass(5.0);
+	}
 	
-	testShaderProgram.compile();
+	game->getPlayer()->setPosition(glm::vec3(-12, 0, 0));
 	
-	testShaderProgram.m_camera.setPosition(glm::vec3(0, 0, 0));
+	app.setMaxFPS(60);
 	
-	renderableObject.setPosition(glm::vec3(5, 0, 0));
-	renderableObject.setRotation(glm::vec3(glm::radians(0.f), glm::radians(0.f), glm::radians(0.f)));
-	
-	glm::vec3 baseScale = glm::vec3(1, 1, 3);
-	
-	float pulseLow = argc < 4 ? 1.0 : atof(argv[3]);
-	float pulseHigh = argc < 5 ? pulseLow : atof(argv[4]);
-	float pulseRate = argc < 6 ? 1.0 : atof(argv[5]);
-	
-	uint32_t width = argc < 2 ? 1 : atoi(argv[1]);
-	uint32_t height = argc < 3 ? 1 : atoi(argv[2]);
-	
-	double render_width = 7.25;
-	double render_height = 4.0;
-	
-	glm::vec3 scaledScale = baseScale / (float)(width > height ? width : height);
-
-	glEnable(GL_DEPTH_TEST);
-	
-	Knee::DeltaTimer timer;
+	glm::vec3 baseScale = glm::vec3(1);
 	
 	// main loop
 	while(!app.shouldQuit()){
-		double delta = timer.getDeltaAndReset();
+		double time = app.getDeltaTimer()->getTime();
+		double delta = app.getDeltaTimer()->getDelta();
 		
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
-		renderableObject.changeRotation(glm::vec3(delta, delta*10, 0));
-		
-		renderableObject.setScale( (glm::vec3( sin(timer.getTime() * pulseRate), sin(timer.getTime() * pulseRate), sin(timer.getTime() * pulseRate) )*((pulseHigh-pulseLow)/2.f) + (pulseHigh+pulseLow)/2.f )  * scaledScale);
-		
-		for(uint32_t j = 0; j < height; j++){
-			double ystep = render_height / height;
+		for(uint32_t i = 0; i < objects; i++){
+			std::string id = std::to_string(i);
 			
-			for(uint32_t i = 0; i < width; i++){
-				double xstep = render_width / width;
-				
-				renderableObject.setPosition(glm::vec3(5, (j+0.5)*ystep - render_height/2.0, (i+0.5)*xstep - render_width/2.0));
-				testShaderProgram.drawRenderableObject(renderableObject);
-			}
+			Knee::GameObject* obj = game->getGameObject(id);
+			
+			// set position
+			obj->setPosition( glm::vec3(0, cos(time + i*angularSpacing)*radius, sin(time + i*angularSpacing)*radius) );
+			obj->setRotation( glm::vec3( sin(time*2 + i*angularSpacing), cos(time*1.5 + i*angularSpacing), sin(time + i*angularSpacing) ) );
+			obj->setScale( glm::vec3( sin(time * pulseRate)*((pulseMax - pulseMin)/2.0) + (pulseMax+pulseMin)/2.0, sin(time * pulseRate)*((pulseMax - pulseMin)/2.0) + (pulseMax + pulseMin)/2.0, sin(time * pulseRate)*((pulseMax - pulseMin)/2.0) + (pulseMax + pulseMin)/2.0) * baseScale );
 		}
-	
-		app.processEvents();
 		
-		app.updateWindow();
+		app.update();
 		
-		//std::cout << "\r" << (1.0 / delta) << "fps" << "   ";
+		std::cout << "\r" << (uint32_t)(1.0 / delta) << "  ";
 	}
 	
 	std::cout << std::endl;

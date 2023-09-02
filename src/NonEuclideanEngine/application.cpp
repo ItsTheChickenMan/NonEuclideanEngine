@@ -11,8 +11,7 @@
 // application class methods definitions //
 
 // constructor
-Knee::Application::Application(){
-}
+Knee::Application::Application(std::string title, uint32_t windowWidth, uint32_t windowHeight) : m_windowTitle(title), m_windowWidth(windowWidth), m_windowHeight(windowHeight) {}
 
 // destructor
 Knee::Application::~Application(){
@@ -21,7 +20,7 @@ Knee::Application::~Application(){
 
 // initialize
 // sets up subsystems, creates the window
-void Knee::Application::initialize(std::string title, uint32_t windowWidth, uint32_t windowHeight){
+void Knee::Application::initialize(){
 	// initialize video subsystem
 	if(SDL_Init(SDL_INIT_VIDEO) < 0){
 		std::cout << Knee::ERROR_PREFACE << SDL_GetError();
@@ -54,7 +53,7 @@ void Knee::Application::initialize(std::string title, uint32_t windowWidth, uint
 	flags |= SDL_WINDOW_SHOWN;
 	flags |= SDL_WINDOW_OPENGL;
 	
-	this->m_window = SDL_CreateWindow(title.c_str(), 20, 50, windowWidth, windowHeight, flags);
+	this->m_window = SDL_CreateWindow(this->m_windowTitle.c_str(), 20, 50, this->m_windowWidth, this->m_windowHeight, flags);
 	
 	assert(this->m_window != NULL);
 	
@@ -69,7 +68,7 @@ void Knee::Application::initialize(std::string title, uint32_t windowWidth, uint
 	}
 	
 	// set viewport size
-	glViewport(0, 0, windowWidth, windowHeight);
+	glViewport(0, 0, this->m_windowWidth, this->m_windowHeight);
 	
 	// enable vsync by default
 	this->setSwapInterval(0);
@@ -135,14 +134,33 @@ int32_t Knee::Application::setSwapInterval(int32_t swapInterval){
 
 // non euclidean application class definitions //
 
-Knee::NonEuclideanApplication::NonEuclideanApplication() : Knee::Application() {
-}
+Knee::GameApplication::GameApplication(std::string title, uint32_t windowWidth, uint32_t windowHeight) : Knee::Application(title, windowWidth, windowHeight), m_game(windowWidth, windowHeight) {}
 
-Knee::NonEuclideanApplication::~NonEuclideanApplication(){
+Knee::GameApplication::~GameApplication(){
 	
 }
 
-void Knee::NonEuclideanApplication::processEvents(){
+Knee::Game* Knee::GameApplication::getGameInstance(){
+	return &this->m_game;
+}
+
+Knee::DeltaTimer* Knee::GameApplication::getDeltaTimer(){
+	return &this->m_deltaTimer;
+}
+
+void Knee::GameApplication::setMaxFPS(uint32_t fps){
+	this->m_expectedDelta = 1.0 / (double)(fps+1);
+}
+
+void Knee::GameApplication::initialize(){
+	// call original initialize
+	Application::initialize();
+	
+	// initialize game as well
+	this->m_game.initialize();
+}
+
+void Knee::GameApplication::processEvents(){
 	// event placeholder
 	SDL_Event event;
 	
@@ -160,12 +178,32 @@ void Knee::NonEuclideanApplication::processEvents(){
 	}
 }
 
-void Knee::NonEuclideanApplication::update(){
-	// clear buffers
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+void Knee::GameApplication::throttleFPS(double frameDelta){
+	double remainingDelta = this->m_expectedDelta - frameDelta;
 	
+	if(remainingDelta <= 1.0/10000.0) return;
 	
+	this->m_deltaTimer.pauseThread(remainingDelta);
+}
+
+void Knee::GameApplication::update(){
+	double delta = this->m_deltaTimer.getDeltaAndReset();
+	double startTime = this->m_deltaTimer.getTime();
+	
+	// process events
+	this->processEvents();
+	
+	// update game objects
+	this->m_game.updateGameObjects(delta);
+	
+	// render scene
+	this->m_game.renderScene();
 	
 	// update buffer
 	this->updateWindow();
+	
+	// throttle fps
+	double endTime = this->m_deltaTimer.getTime();
+	
+	this->throttleFPS(endTime - startTime);
 }

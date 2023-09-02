@@ -1,5 +1,7 @@
 #pragma once
 
+#include <NonEuclideanEngine/misc.hpp>
+
 #include <glad/glad.h>
 #include <map>
 #include <vector>
@@ -79,6 +81,7 @@ namespace Knee {
 			bool isCompiled();
 			GLint getUniformLocation(std::string);
 			
+			// returns 0 upon success and -1 upon error
 			int32_t attachShader(GLenum, std::string);
 			int32_t loadUniformLocations();
 			
@@ -95,36 +98,13 @@ namespace Knee {
 	
 	
 	// abstract class defining RenderableObjects and their properties.  Any object that you want to be renderable by a RenderableObjectShaderProgram should inherit from this class and overload the appropriate methods.
-	class RenderableObject {
+	class RenderableObject : public virtual GeneralObject {
 		// vertex data to be used when rendering
 		const VertexData* m_vertexData;
 	
-		// caches for values to be reused if one changes
-		glm::vec3 m_position = glm::vec3(0);
-		glm::vec3 m_rotation = glm::vec3(0);
-		glm::vec3 m_scale = glm::vec3(1);
-	
-		// model matrix
-		glm::mat4 m_modelMatrix = glm::mat4(1);
-		
 		public:
 			RenderableObject(Knee::VertexData*);
-			
-			glm::vec3 getPosition();
-			glm::vec3 getRotation();
-			glm::vec3 getScale();
-			
-			void setPosition(glm::vec3);
-			void setRotation(glm::vec3);
-			void setScale(glm::vec3);
-			
-			void changePosition(glm::vec3);
-			void changeRotation(glm::vec3);
-			void changeScale(glm::vec3);
-			
-			void updateModelMatrix();
-			
-			glm::mat4 getModelMatrix();
+
 			const Knee::VertexData* getVertexData() const;
 		
 			void use();
@@ -143,6 +123,7 @@ namespace Knee {
 		
 		protected:
 			// a copy of the matrices used to transform m_vpMatrix.  they're only used internally as a reference if the other is changed, but generally m_vpMatrix will be used for shaders so that the matrix multiplication of projection * view doesn't have to be done more than once per frame (unless necessary)
+			// projection matrix is public here because subclasses are expected to mess with it a bit, but not so much the view matrix.
 			glm::mat4 m_projectionMatrix = glm::mat4(1);
 			//glm::mat4 m_viewMatrix;
 		
@@ -157,7 +138,7 @@ namespace Knee {
 			void updateViewMatrix();
 			
 			// update m_vpMatrix based on the current values of the projection and view matrices.
-			// this is called automatically whenever setCameraPosition and setCameraRotation are called.
+			// this is called automatically whenever setPosition and setRotation are called.
 			void updateViewProjectionMatrix();
 			
 			void setPosition(glm::vec3);
@@ -174,12 +155,13 @@ namespace Knee {
 	
 	// class for rendering RenderableObjects, rendered with perspective projection from the viewpoint of a camera.
 	class RenderableObjectShaderProgram : public ShaderProgram {
-		public:
-			Knee::PerspectiveCamera m_camera;
+		Knee::PerspectiveCamera m_camera;
 		
 		public:
 			RenderableObjectShaderProgram(float, float, float, float);
 		
-			void drawRenderableObject(RenderableObject&);
+			Knee::PerspectiveCamera* getCamera();
+			
+			void drawRenderableObject(RenderableObject*);
 	};
 }

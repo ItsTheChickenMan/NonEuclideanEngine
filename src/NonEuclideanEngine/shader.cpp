@@ -184,7 +184,7 @@ int32_t Knee::ShaderProgram::attachShader(GLenum shaderType, std::string file){
 		
 		return -1;
 	}
-
+	
 	// create shader object
 	GLuint shader = glCreateShader(shaderType);
 	
@@ -391,71 +391,9 @@ void Knee::ShaderProgram::drawVertexData(const Knee::VertexData* vertexData){
 
 Knee::RenderableObject::RenderableObject(Knee::VertexData* vertexData) : m_vertexData(vertexData) {}
 
-glm::mat4 Knee::RenderableObject::getModelMatrix(){
-	return this->m_modelMatrix;
-}
-
 // NOTE: m_vertexData is constant in RenderableObject, so do not attempt to modify
 const Knee::VertexData* Knee::RenderableObject::getVertexData() const {
 	return this->m_vertexData;
-}
-
-glm::vec3 Knee::RenderableObject::getPosition(){ return this->m_position; }
-glm::vec3 Knee::RenderableObject::getRotation(){ return this->m_rotation; }
-glm::vec3 Knee::RenderableObject::getScale(){ return this->m_scale; }
-
-void Knee::RenderableObject::setPosition(glm::vec3 position){
-	this->m_position = position;
-	
-	this->updateModelMatrix();
-}
-
-void Knee::RenderableObject::setRotation(glm::vec3 rotation){
-	this->m_rotation = rotation;
-	
-	this->updateModelMatrix();
-}
-
-void Knee::RenderableObject::setScale(glm::vec3 scale){
-	this->m_scale = scale;
-	
-	this->updateModelMatrix();
-}
-
-void Knee::RenderableObject::changePosition(glm::vec3 change){
-	glm::vec3 old = this->getPosition();
-	
-	this->setPosition(old + change);
-}
-
-void Knee::RenderableObject::changeRotation(glm::vec3 change){
-	glm::vec3 old = this->getRotation();
-	
-	this->setRotation(old + change);
-}
-
-void Knee::RenderableObject::changeScale(glm::vec3 change){
-	glm::vec3 old = this->getScale();
-	
-	this->setScale(old + change);
-}
-
-
-void Knee::RenderableObject::updateModelMatrix(){
-	// reset to identity
-	this->m_modelMatrix = glm::mat4(1);
-	
-	// translate
-	this->m_modelMatrix = glm::translate(this->m_modelMatrix, this->m_position);
-	
-	// rotate
-	this->m_modelMatrix = glm::rotate(this->m_modelMatrix, this->m_rotation.z, glm::vec3(0, 0, 1));
-	this->m_modelMatrix = glm::rotate(this->m_modelMatrix, this->m_rotation.y, glm::vec3(0, 1, 0));
-	this->m_modelMatrix = glm::rotate(this->m_modelMatrix, this->m_rotation.x, glm::vec3(1, 0, 0));
-	
-	
-	// scale
-	this->m_modelMatrix = glm::scale(this->m_modelMatrix, this->m_scale);
 }
 
 void Knee::RenderableObject::use(){
@@ -534,20 +472,24 @@ Knee::RenderableObjectShaderProgram::RenderableObjectShaderProgram(float fov, fl
 	this->m_camera.setPerspectiveProperties(fov, aspectRatio, near, far);
 }
 
+Knee::PerspectiveCamera* Knee::RenderableObjectShaderProgram::getCamera(){
+	return &this->m_camera;
+}
+
 // NOTE: this method will look for certain uniforms (but will silently continue if not found):
 // mvp - (projection * view * model) matrix
 // transposeInverseModel - matrix for transforming the normals such that they match the model after it is transformed by the model matrix.
-void Knee::RenderableObjectShaderProgram::drawRenderableObject(RenderableObject& renderableObject){
+void Knee::RenderableObjectShaderProgram::drawRenderableObject(RenderableObject* renderableObject){
 	// calculate mvp matrix
-	glm::mat4 mvp = this->m_camera.getViewProjectionMatrix() * renderableObject.getModelMatrix();
+	glm::mat4 mvp = this->m_camera.getViewProjectionMatrix() * renderableObject->getModelMatrix();
 	
 	// calculate transposeInverseModel matrix
-	glm::mat4 tim = glm::transpose(glm::inverse(renderableObject.getModelMatrix()));
+	glm::mat4 tim = glm::transpose(glm::inverse(renderableObject->getModelMatrix()));
 	
 	// set uniforms
 	this->setUniformMat4("mvp", mvp);
 	this->setUniformMat4("transposeInverseModel", tim);
 	
 	// draw vertex data
-	this->drawVertexData( renderableObject.getVertexData() );
+	this->drawVertexData( renderableObject->getVertexData() );
 }
