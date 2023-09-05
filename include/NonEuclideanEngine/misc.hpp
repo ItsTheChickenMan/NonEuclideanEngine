@@ -42,13 +42,20 @@ namespace Knee {
 			glm::vec3 getRotation();
 			glm::vec3 getScale();
 			
-			void setPosition(glm::vec3);
-			void setRotation(glm::vec3);
-			void setScale(glm::vec3);
+			virtual void setPosition(glm::vec3);
+			virtual void setRotation(glm::vec3);
+			virtual void setScale(glm::vec3);
 			
 			void changePosition(glm::vec3);
 			void changeRotation(glm::vec3);
 			void changeScale(glm::vec3);
+			
+			glm::mat4 getTranslationMatrix();
+			glm::mat4 getRotationMatrix();
+			glm::mat4 getScaleMatrix();
+			
+			// get the direction that this object is currently pointing in
+			glm::vec3 getForwardVector();
 			
 			void updateModelMatrix();
 			

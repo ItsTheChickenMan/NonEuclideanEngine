@@ -65,8 +65,10 @@ namespace Knee {
 		// expected delta based on max fps (defaults to 60)
 		double m_expectedDelta = 1.0 / 60.0;
 		
+		protected:
+			void throttleFPS(double);
+			
 		public:
-			// METHODS //
 			GameApplication(std::string, uint32_t, uint32_t);
 			~GameApplication();
 			
@@ -74,8 +76,9 @@ namespace Knee {
 			Knee::Game* getGameInstance();
 			
 			void initialize();
+			
+			double getFPS();
 			void setMaxFPS(uint32_t);
-			void throttleFPS(double);
 			
 			void processEvents();
 			void update();

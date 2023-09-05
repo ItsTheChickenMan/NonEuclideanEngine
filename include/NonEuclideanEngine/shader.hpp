@@ -110,10 +110,8 @@ namespace Knee {
 			void use();
 	};
 	
-	class Camera {
-		// position, camera line of sight
-		glm::vec3 m_position;
-		glm::vec3 m_forward;
+	class Camera : public GeneralObject {
+		// up vector
 		glm::vec3 m_up = glm::vec3(0, 1, 0); // TODO: will this ever need to be customized?
 		
 		glm::mat4 m_viewMatrix = glm::mat4(1);

@@ -172,10 +172,13 @@ void Knee::GameApplication::processEvents(){
 			continue;
 		}
 		
-		switch(event.type){
-			
-		}
+		// forward to game to process as game event
+		this->getGameInstance()->processEvent(event);
 	}
+}
+
+double Knee::GameApplication::getFPS(){
+	return 1.0 / this->getDeltaTimer()->getDelta();
 }
 
 void Knee::GameApplication::throttleFPS(double frameDelta){
@@ -190,14 +193,23 @@ void Knee::GameApplication::update(){
 	double delta = this->m_deltaTimer.getDeltaAndReset();
 	double startTime = this->m_deltaTimer.getTime();
 	
+	// reset input handler
+	this->getGameInstance()->getPlayer()->getInputHandler()->reset();
+	
 	// process events
 	this->processEvents();
 	
+	// get game instance
+	Knee::Game* game = this->getGameInstance();
+	
+	// update player
+	game->getPlayer()->update(delta);
+	
 	// update game objects
-	this->m_game.updateGameObjects(delta);
+	game->updateGameObjects(delta);
 	
 	// render scene
-	this->m_game.renderScene();
+	game->renderScene();
 	
 	// update buffer
 	this->updateWindow();

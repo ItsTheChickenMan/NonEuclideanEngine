@@ -422,7 +422,7 @@ glm::mat4 Knee::Camera::getViewProjectionMatrix(){
 }
 
 void Knee::Camera::updateViewMatrix(){
-	this->m_viewMatrix = glm::lookAt(this->m_position, this->m_position + this->m_forward, this->m_up);
+	this->m_viewMatrix = glm::lookAt(this->getPosition(), this->getPosition() + this->getForwardVector(), this->m_up);
 }
 
 void Knee::Camera::updateViewProjectionMatrix(){
@@ -432,20 +432,23 @@ void Knee::Camera::updateViewProjectionMatrix(){
 }
 
 void Knee::Camera::setPosition(glm::vec3 v){
-	this->m_position = v;
+	GeneralObject::setPosition(v);
 	
 	// update vp
 	this->updateViewProjectionMatrix();
 }
 
-// in pitch, yaw, roll order
+// in roll, pitch, yaw, order
 // roll value (r.z) is ignored
 void Knee::Camera::setRotation(glm::vec3 r){
-	this->m_forward = glm::normalize(glm::vec3(
-		cos(r.y)*cos(r.x),
+	// call general object setter
+	GeneralObject::setRotation(r);
+	
+	/*this->m_forward = glm::normalize(glm::vec3(
+		sin(r.y)*cos(r.x),
 		sin(r.x),
-		sin(r.y)*cos(r.x)
-	));
+		cos(r.y)*cos(r.x)
+	));*/
 	
 	// update vp
 	this->updateViewProjectionMatrix();

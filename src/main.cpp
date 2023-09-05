@@ -10,6 +10,10 @@
 #include <cmath>
 #include <cstdio>
 
+glm::vec3 infinitySymbol(double t){
+	return glm::vec3(0, sin(2*t)*0.5, sin(t));
+}
+
 int main(int argc, char* argv[]){
 	uint32_t windowWidth = 1280;
 	uint32_t windowHeight = 720;
@@ -68,50 +72,35 @@ int main(int argc, char* argv[]){
 	
 	Knee::VertexData testVertexData(testRawVertexData, testSize, testSizeBytes, "p");
 	
-	uint32_t objects = argc < 2 ? 8 : atoi(argv[1]);
-	double radius = argc < 3 ? 4.0 : atof(argv[2]);
-	double angularSpacing = 2*3.1415 / objects;
-	double pulseMin = argc < 4 ? 1.0 : atof(argv[3]);
-	double pulseMax = argc < 5 ? pulseMin : atof(argv[4]);
-	double pulseRate = argc < 6 ? 1.0 : atof(argv[5]);
-	
+	// get game instance
 	Knee::Game* game = app.getGameInstance();
 	
-	for(uint32_t i = 0; i < objects; i++){
-		std::string id = std::to_string(i);
-		
-		game->addRenderableGameObject( id, new Knee::RenderableGameObject(&testVertexData) );
-		
-		game->getGameObject( id )->setPosition(glm::vec3(0, 0, 0));
-		game->getGameObject( id )->setRotation(glm::vec3(0, 0, 0));
-		game->getGameObject( id )->setMass(5.0);
-	}
+	game->addRenderableGameObject( "myObject", new Knee::RenderableGameObject(&testVertexData) );
+	game->addRenderableGameObject( "myObject1", new Knee::RenderableGameObject(&testVertexData) );
 	
-	game->getPlayer()->setPosition(glm::vec3(-12, 0, 0));
+	game->getGameObject( "myObject1" )->setPosition( glm::vec3(-3, 0, 0) );
 	
+	game->getPlayer()->setPosition( glm::vec3(0, 0, -6) );
+	
+	// misc settings
 	app.setMaxFPS(60);
 	
-	glm::vec3 baseScale = glm::vec3(1);
+	double t = 0;
 	
 	// main loop
 	while(!app.shouldQuit()){
 		double time = app.getDeltaTimer()->getTime();
-		double delta = app.getDeltaTimer()->getDelta();
+		t += app.getDeltaTimer()->getDelta();
 		
-		for(uint32_t i = 0; i < objects; i++){
-			std::string id = std::to_string(i);
-			
-			Knee::GameObject* obj = game->getGameObject(id);
-			
-			// set position
-			obj->setPosition( glm::vec3(0, cos(time + i*angularSpacing)*radius, sin(time + i*angularSpacing)*radius) );
-			obj->setRotation( glm::vec3( sin(time*2 + i*angularSpacing), cos(time*1.5 + i*angularSpacing), sin(time + i*angularSpacing) ) );
-			obj->setScale( glm::vec3( sin(time * pulseRate)*((pulseMax - pulseMin)/2.0) + (pulseMax+pulseMin)/2.0, sin(time * pulseRate)*((pulseMax - pulseMin)/2.0) + (pulseMax + pulseMin)/2.0, sin(time * pulseRate)*((pulseMax - pulseMin)/2.0) + (pulseMax + pulseMin)/2.0) * baseScale );
-		}
+		//std::cout << glm::to_string(game->getCamera()->getPosition()) << std::endl;
+		
+		//game->getGameObject( "myObject" )->setPosition( glm::vec3(0, 0, sin(time)*2.0) );
+		game->getGameObject( "myObject" )->setRotation( glm::vec3(t, 0, 0) );
 		
 		app.update();
 		
-		std::cout << "\r" << (uint32_t)(1.0 / delta) << "  ";
+		// print fps
+		//std::cout << "\r" << (uint32_t)app.getFPS() << "  ";
 	}
 	
 	std::cout << std::endl;

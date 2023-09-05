@@ -84,21 +84,38 @@ void Knee::GeneralObject::changeScale(glm::vec3 change){
 	this->setScale(old + change);
 }
 
+glm::mat4 Knee::GeneralObject::getTranslationMatrix(){
+	return glm::translate(glm::mat4(1), this->m_position);
+}
+
+#include <glm/gtx/string_cast.hpp>
+#include <iostream>
+
+glm::mat4 Knee::GeneralObject::getRotationMatrix(){
+	glm::mat4 out = glm::mat4(1);
+	
+	out = glm::rotate(out, this->m_rotation.z, glm::vec3(0, 0, 1));
+	out = glm::rotate(out, this->m_rotation.y, glm::vec3(0, 1, 0));
+	out = glm::rotate(out, this->m_rotation.x, glm::vec3(1, 0, 0));
+	
+	return out;
+}
+
+glm::mat4 Knee::GeneralObject::getScaleMatrix(){
+	return glm::scale(glm::mat4(1), this->m_scale);
+}
+
+glm::vec3 Knee::GeneralObject::getForwardVector(){
+	// apply rotation transformation to normalized vector
+	glm::vec4 un = this->getRotationMatrix() * glm::vec4(0, 0, 1, 0);
+	
+	// return just xyz (w component doesn't matter, shouldn't even have a value)
+	return glm::vec3(un);
+}
+
 void Knee::GeneralObject::updateModelMatrix(){
-	// reset to identity
-	this->m_modelMatrix = glm::mat4(1);
-	
-	// translate
-	this->m_modelMatrix = glm::translate(this->m_modelMatrix, this->m_position);
-	
-	// rotate
-	this->m_modelMatrix = glm::rotate(this->m_modelMatrix, this->m_rotation.z, glm::vec3(0, 0, 1));
-	this->m_modelMatrix = glm::rotate(this->m_modelMatrix, this->m_rotation.y, glm::vec3(0, 1, 0));
-	this->m_modelMatrix = glm::rotate(this->m_modelMatrix, this->m_rotation.x, glm::vec3(1, 0, 0));
-	
-	
-	// scale
-	this->m_modelMatrix = glm::scale(this->m_modelMatrix, this->m_scale);
+	// update with all the matrices
+	this->m_modelMatrix = this->getScaleMatrix() * this->getRotationMatrix() * this->getTranslationMatrix() * glm::mat4(1);
 }
 
 glm::mat4 Knee::GeneralObject::getModelMatrix(){
