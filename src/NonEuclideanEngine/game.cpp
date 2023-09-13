@@ -5,6 +5,22 @@
 
 #include <glm/gtx/norm.hpp>
 
+// StaticGameObject //
+
+Knee::StaticGameObject::StaticGameObject(){
+}
+
+Knee::StaticGameObject::~StaticGameObject(){
+}
+
+// RenderableStaticGameObject //
+
+Knee::RenderableStaticGameObject::RenderableStaticGameObject(Knee::VertexData* vertexData) : RenderableObject(vertexData) {
+}
+
+Knee::RenderableStaticGameObject::~RenderableStaticGameObject(){
+}
+
 // -------------------- //
 // GameObject //
 
@@ -48,10 +64,21 @@ void Knee::GameObject::update(double delta){
 // -------------------- //
 // RenderableGameObject //
 
-Knee::RenderableGameObject::RenderableGameObject(Knee::VertexData* vertexData) : RenderableObject(vertexData), GameObject() {}
+Knee::RenderableGameObject::RenderableGameObject(Knee::VertexData* vertexData) : GameObject(), RenderableStaticGameObject(vertexData){}
 
 Knee::RenderableObject* Knee::RenderableGameObject::asRenderableObject(){
 	return static_cast<RenderableObject*>(this);
+}
+
+// -------------------- //
+// Portal //
+
+Knee::Portal::Portal(Knee::VertexData* vertexData) : RenderableGameObject(vertexData) {}
+
+bool Knee::Portal::isVisible(Knee::PerspectiveCamera* camera){
+	
+	
+	return false;
 }
 
 // -------------------- //

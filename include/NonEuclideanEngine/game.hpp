@@ -13,8 +13,23 @@
 namespace Knee {	
 	// classes //
 	
-	// a game object that can physically interact with a game.  pretty much just GeneralObjects with extra physics and some extra data
-	class GameObject : public virtual GeneralObject {
+	// a game object that does not move and is not affected by physics, but can still interact with other game objects.
+	class StaticGameObject : public GeneralObject {
+		public:
+			StaticGameObject();
+			virtual ~StaticGameObject();
+	};
+	
+	// like a static game object, but now you can see it!
+	class RenderableStaticGameObject : public virtual StaticGameObject, public RenderableObject {
+		public:
+			RenderableStaticGameObject(Knee::VertexData*);
+			virtual ~RenderableStaticGameObject();
+	};
+	
+	// a game object that can physically interact with a game and be affected by physics.
+	// essentially a StaticGameObject, but no longer static (crazy)
+	class GameObject : public virtual StaticGameObject {
 		// physics
 		double m_mass = 0.0;
 		glm::vec3 m_velocity = glm::vec3(0);
@@ -43,7 +58,7 @@ namespace Knee {
 	};
 	
 	// a game object that can be rendered in the scene.
-	class RenderableGameObject : public GameObject, public RenderableObject {
+	class RenderableGameObject : public GameObject, public RenderableStaticGameObject {
 		// might be some extra data in here at some point?
 		
 		public:
@@ -52,6 +67,17 @@ namespace Knee {
 			Knee::RenderableObject* asRenderableObject();			
 	};
 	
+	// the backbone of non-euclidean space.  allows the player to seamlessly teleport between paired portals and see the other side via portal shader
+	class Portal : public RenderableGameObject {
+		
+
+		public:
+			Portal(Knee::VertexData*);
+
+			bool isVisible(Knee::PerspectiveCamera*);
+	};
+
+
 	// a class which stores keybinds to player inputs and used as a medium between Application sdl event handling and Game input handling
 	class PlayerInputHandler {
 		// keybinds
@@ -142,8 +168,8 @@ namespace Knee {
 		// settings
 		double m_mouseSensitivity = 1.0; // multiplied by 1/500, then multiplied by mouse delta in pixels
 		
-		double m_playerSpeed = 2.0;
-		double m_sprintMultiplier = 2.0;
+		double m_playerSpeed = 2.0; // general speed factor (units tbd)
+		double m_sprintMultiplier = 2.0; // how much speed is multiplied by when sprint bind is pressed
 		
 		// input handler
 		Knee::PlayerInputHandler m_inputHandler;
@@ -194,7 +220,7 @@ namespace Knee {
 		
 		// shaders
 		Knee::RenderableObjectShaderProgram m_renderableGameObjectShaderProgram;
-		
+
 		public:
 			Game(uint32_t, uint32_t);
 			~Game();

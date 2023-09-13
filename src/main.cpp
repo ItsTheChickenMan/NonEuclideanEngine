@@ -1,3 +1,5 @@
+#define SDL_MAIN_HANDLED
+
 #include <iostream>
 #include <NonEuclideanEngine/application.hpp>
 #include <NonEuclideanEngine/misc.hpp>
