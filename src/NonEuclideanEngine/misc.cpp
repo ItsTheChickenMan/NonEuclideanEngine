@@ -56,18 +56,21 @@ glm::vec3 Knee::GeneralObject::getScale(){ return this->m_scale; }
 void Knee::GeneralObject::setPosition(glm::vec3 position){
 	this->m_position = position;
 	
+	this->updateTranslationMatrix();
 	this->updateModelMatrix();
 }
 
 void Knee::GeneralObject::setRotation(glm::vec3 rotation){
 	this->m_rotation = rotation;
 	
+	this->updateRotationMatrix();
 	this->updateModelMatrix();
 }
 
 void Knee::GeneralObject::setScale(glm::vec3 scale){
 	this->m_scale = scale;
 	
+	this->updateScaleMatrix();
 	this->updateModelMatrix();
 }
 
@@ -129,21 +132,15 @@ void Knee::GeneralObject::applyMatrixTransformation(glm::mat4 matrixTransformati
 }
 
 glm::mat4 Knee::GeneralObject::getTranslationMatrix(){
-	return glm::translate(glm::mat4(1), this->m_position);
+	return this->m_translationMatrix;
 }
 
 glm::mat4 Knee::GeneralObject::getRotationMatrix(){
-	glm::mat4 out = glm::mat4(1);
-	
-	out = glm::rotate(out, this->m_rotation.z, glm::vec3(0, 0, 1));
-	out = glm::rotate(out, this->m_rotation.y, glm::vec3(0, 1, 0));
-	out = glm::rotate(out, this->m_rotation.x, glm::vec3(1, 0, 0));
-	
-	return out;
+	return this->m_rotationMatrix;
 }
 
 glm::mat4 Knee::GeneralObject::getScaleMatrix(){
-	return glm::scale(glm::mat4(1), this->m_scale);
+	return this->m_scaleMatrix;
 }
 
 glm::vec3 Knee::GeneralObject::getForwardVector(){
@@ -152,6 +149,24 @@ glm::vec3 Knee::GeneralObject::getForwardVector(){
 	
 	// return just xyz (w component doesn't matter)
 	return glm::vec3(un);
+}
+
+void Knee::GeneralObject::updateTranslationMatrix(){
+	this->m_translationMatrix = glm::translate(glm::mat4(1), this->m_position);
+}
+
+void Knee::GeneralObject::updateRotationMatrix(){
+	glm::mat4 out = glm::mat4(1);
+	
+	out = glm::rotate(out, this->m_rotation.z, glm::vec3(0, 0, 1));
+	out = glm::rotate(out, this->m_rotation.y, glm::vec3(0, 1, 0));
+	out = glm::rotate(out, this->m_rotation.x, glm::vec3(1, 0, 0));
+
+	this->m_rotationMatrix = out;
+}
+
+void Knee::GeneralObject::updateScaleMatrix(){
+	this->m_scaleMatrix = glm::scale(glm::mat4(1), this->m_scale);
 }
 
 void Knee::GeneralObject::updateModelMatrix(){

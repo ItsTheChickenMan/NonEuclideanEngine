@@ -40,6 +40,11 @@ namespace Knee {
 		glm::vec3 m_rotation = glm::vec3(0);
 		glm::vec3 m_scale = glm::vec3(1);
 		
+		// individual transformation matrices
+		glm::mat4 m_translationMatrix = glm::mat4(1);
+		glm::mat4 m_rotationMatrix = glm::mat4(1);
+		glm::mat4 m_scaleMatrix = glm::mat4(1);
+
 		// model matrix
 		glm::mat4 m_modelMatrix = glm::mat4(1);
 		
@@ -67,6 +72,8 @@ namespace Knee {
 			void subtractGeneralObject(GeneralObject obj);
 
 			// this essentially does the same thing as applyMatrixTransformation, but it updates the position, rotation, and scale values appropriately
+			// it's also a bit slower since it has to update all of the values, recalculate the applicable transformation matrices, and multiply the 3 matrices together for the resulting transformation.
+			// while this is generally preferred, use applyMatrixTransformation if you're positive you don't need to access any of those values and you want to shave off a bit of time
 			void applyGeneralObjectTransformation(GeneralObject obj);
 
 			glm::mat4 getTranslationMatrix();
@@ -76,6 +83,9 @@ namespace Knee {
 			// get the direction that this object is currently pointing in
 			glm::vec3 getForwardVector();
 			
+			void updateTranslationMatrix();
+			void updateRotationMatrix();
+			void updateScaleMatrix();
 			void updateModelMatrix();
 			
 			glm::mat4 getModelMatrix();
