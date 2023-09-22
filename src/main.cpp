@@ -41,8 +41,13 @@ void loadMap(Knee::Game* game, Knee::VertexData* cubeVertexData, Knee::Texture2D
 	//game->getStaticGameObject( "wall14" )->setScale(glm::vec3(10, 8, 2));
 
 	// add objects
-	/*game->addRenderableStaticGameObject( "floor2", new Knee::RenderableStaticGameObject(cubeVertexData, wallTexture) );
-	game->addRenderableStaticGameObject( "wall21", new Knee::RenderableStaticGameObject(cubeVertexData, floorTexture) );
+	game->addRenderableStaticGameObject( "floor2", new Knee::RenderableStaticGameObject(cubeVertexData, wallTexture) );
+	
+	// set object properties
+	game->getStaticGameObject( "floor2" )->setPosition(glm::vec3(-20, 0, 0));
+	game->getStaticGameObject( "floor2" )->setScale(glm::vec3(10, 2, 10));
+
+	/*game->addRenderableStaticGameObject( "wall21", new Knee::RenderableStaticGameObject(cubeVertexData, floorTexture) );
 	game->addRenderableStaticGameObject( "wall22", new Knee::RenderableStaticGameObject(cubeVertexData, floorTexture) );
 	//game->addRenderableStaticGameObject( "wall23", new Knee::RenderableStaticGameObject(cubeVertexData, floorTexture) );
 	game->addRenderableStaticGameObject( "wall24", new Knee::RenderableStaticGameObject(cubeVertexData, floorTexture) );
@@ -170,16 +175,16 @@ int main(int argc, char* argv[]){
 
 	// assign properties
 	portal1.setPosition(glm::vec3(0, 2, -3));
-	portal1.setRotation(glm::vec3(0, 0, 0));
-	portal1.setScale(glm::vec3(2, 2, 2));
+	portal1.setRotation(glm::vec3(0, glm::radians(0.f), 0));
+	portal1.setScale(glm::vec3(8, 2, 2));
 
 	//portal2.setPosition(glm::vec3(-20, 3, -3));
 	//portal2.setRotation(glm::vec3(glm::radians(45.f), 0, 0));
 	//portal2.setScale(glm::vec3(0.5, 0.5, 0.5));
 
 	portal2.setPosition(glm::vec3(0, 2, 4));
-	portal2.setRotation(glm::vec3(0, 0, 0));
-	portal2.setScale(glm::vec3(2, 2, 2));
+	portal2.setRotation(glm::vec3(0, glm::radians(0.f), 0));
+	portal2.setScale(glm::vec3(8, 2, 2));
 
 	// pair visual portals
 	portal1.pairVisualPortal(&portal2);
@@ -188,7 +193,7 @@ int main(int argc, char* argv[]){
 	// add portals as game objects
 	game->addVisualPortal( "portal1", &portal1 );
 	game->addVisualPortal( "portal2", &portal2 );
-
+	
 	// misc settings
 	app.setMaxFPS(60);
 	

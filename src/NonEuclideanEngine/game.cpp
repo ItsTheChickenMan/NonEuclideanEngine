@@ -95,15 +95,18 @@ Knee::VisualPortal::VisualPortal(Knee::VertexData* vertexData, uint32_t screenWi
 		NULL
 	)
 {
-	// create texture for m_texture
-	this->m_texture = new Knee::Texture2D(screenWidth, screenHeight, GL_UNSIGNED_BYTE);
+	// NOTE: we keep m_texture NULL until loadPortalTexture is called, which assigns it to one of the aux textures
+	this->m_texture = NULL;
+
+	// create auxiliary texture
+	this->m_mainTexture = new Knee::Texture2D(screenWidth, screenHeight, GL_UNSIGNED_BYTE);
 
 	// framebuffer
 	glGenFramebuffers(1, &this->m_mainFramebuffer);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, this->m_mainFramebuffer);
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->m_texture->getGLTexture(), 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->m_mainTexture->getGLTexture(), 0);
 
 	// renderbuffer
 	glGenRenderbuffers(1, &this->m_mainRenderbuffer);
@@ -113,14 +116,14 @@ Knee::VisualPortal::VisualPortal(Knee::VertexData* vertexData, uint32_t screenWi
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, this->m_mainRenderbuffer);
 
 	// create secondary texture for self rendering
-	this->m_secondaryTexture = new Knee::Texture2D(screenWidth, screenHeight, GL_UNSIGNED_BYTE);
+	this->m_auxTexture = new Knee::Texture2D(screenWidth, screenHeight, GL_UNSIGNED_BYTE);
 
 	// aux framebuffer
 	glGenFramebuffers(1, &this->m_auxFramebuffer);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, this->m_auxFramebuffer);
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->m_secondaryTexture->getGLTexture(), 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->m_auxTexture->getGLTexture(), 0);
 
 	// aux renderbuffer
 	glGenRenderbuffers(1, &this->m_auxRenderbuffer);
@@ -129,21 +132,18 @@ Knee::VisualPortal::VisualPortal(Knee::VertexData* vertexData, uint32_t screenWi
 
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, this->m_auxRenderbuffer);
 
+	// back to default renderbuffer
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 	// back to default framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	this->m_auxTexture = new Knee::Texture2D(screenWidth, screenHeight, GL_UNSIGNED_BYTE);
 };
 
 Knee::VisualPortal::~VisualPortal(){
-	// free texture
-	delete this->m_texture;
+	// free main texture
+	delete this->m_mainTexture;
 
-	// free secondary texture
-	delete this->m_secondaryTexture;
-
+	// free aux texture
 	delete this->m_auxTexture;
 }
 
@@ -160,192 +160,104 @@ void Knee::VisualPortal::pairVisualPortal(Knee::VisualPortal* portal){
 
 // loads the texture for the visual portal so it can be used for rendering
 void Knee::VisualPortal::loadPortalTexture(std::vector<RenderableObject*>* renderableObjects, Knee::RenderableObjectShaderProgram* renderableObjectShaderProgramWithDepth){
+	// FIXME: weird bug where camera gets moved down 3 units and back 1 unit?  this probably depends on portal positions + stuff somehow
+
 	// if we're paired to ourselves, do nothing
-	if(this->m_pair == this) return;
+	if(this->isOwnPair()) return;
 	
-	// difference transformation
+	// calculate the transformation to move objects to portal space
 	Knee::GeneralObject portalSpaceTransformation = this->asGeneralObject()->getInverseGeneralObject();
 	portalSpaceTransformation.applyGeneralObjectTransformation(*this->m_pair->asGeneralObject());
 
+	// calculate the inverse of the portal transformation
 	Knee::GeneralObject inversePortalSpaceTransformation = portalSpaceTransformation.getInverseGeneralObject();
 
-	// total transformation
-	Knee::GeneralObject totalTransformation;
+	// calculate total transformation
+	// initialized to at least one transformation because regardless of how many extra recurses we're doing, we always render at least once
+	Knee::GeneralObject totalTransformation = portalSpaceTransformation;
 
-	// store camera	
-	Knee::PerspectiveCamera* camera = this->getShaderProgram()->getCamera();
-
-	// set u_additionalModel to identity
-	this->getShaderProgram()->setUniformMat4("u_additionalModel", glm::mat4(1));
+	// apply additional transformation based on requested recurses
+	totalTransformation.applyGeneralObjectTransformation(portalSpaceTransformation, Knee::VisualPortal::RECURSIVE_WORLD_RENDER_COUNT); 
 	
-	// copy current texture into secondary texture, since secondary texture is what we will use for rendering while our main texture will be rendered to by the framebuffer
-	// we also save the current texture so we don't lose the reference
-	Knee::Texture2D* mainFramebufferTexture = this->m_texture;
+	// get reference to camera
+	// this should be shared across all shader programs, so getting our own is okay
+	Knee::PerspectiveCamera* camera = this->getShaderProgram()->getCamera();
+	
+	std::cout << glm::to_string(camera->getPosition()) << std::endl;
+	
+	// apply transformation to camera
+	// this moves it to the model it needs for the last portal in the line, and is then repeatedly moved back until it's at its original position
+	camera->applyGeneralObjectTransformation(totalTransformation);
+	camera->updateViewProjectionMatrix();
 
-	// set our texture to the secondary texture
-	this->setTexture(this->m_secondaryTexture);
+	std::cout << glm::to_string(camera->getPosition()) << std::endl;
 
-	// to render the portal properly when it's looking at itself, we render the world a few more times (ideally a small number) and then for the rest copy the existing render
-	// recursively render the world to render our own portal
-	// TODO: this should ONLY happen when we're confident we're looking at this portal through it, otherwise this is a total waste of time
+	// active texture info
+	// we need this because we flip between the main and aux texture repeatedly
+	uint32_t activeTexture = 0;
+
+	uint32_t framebuffers[] = {this->m_mainFramebuffer, this->m_auxFramebuffer};
+	Knee::Texture2D* textures[] = {this->m_mainTexture, this->m_auxTexture};
+
+	// we run this for requested recurses + 1 times to make sure we render at least once
 	for(uint32_t i = 0; i < Knee::VisualPortal::RECURSIVE_WORLD_RENDER_COUNT+1; i++){
-		// if this isn't the first pass
-		if(i > 0){
-			// bind auxiliary framebuffer
-			glBindFramebuffer(GL_FRAMEBUFFER, this->m_auxFramebuffer);
-		} else {
-			// bind main framebuffer
-			glBindFramebuffer(GL_FRAMEBUFFER, this->m_mainFramebuffer);
-		}
-		
-		// clear
+		// get inactive texture
+		uint32_t inactiveTexture = (activeTexture+1) % 2;
+
+		// bind framebuffer to inactive texture
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffers[inactiveTexture]);
+
+		// clear color + depth buffers		
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// temporarily move camera
-		camera->applyGeneralObjectTransformation(portalSpaceTransformation);
-		camera->updateViewProjectionMatrix();
+		// use active texture
+		this->setTexture(textures[activeTexture]);
 
-		// add to total transformation
-		totalTransformation.applyGeneralObjectTransformation(portalSpaceTransformation);
+		// render objects
+		for(uint32_t j = 0; j < renderableObjects->size(); j++){
+			// get object
+			Knee::RenderableObject* obj = renderableObjects->at(j);
 
-		// render each object from camera's new perspective
-		for(uint32_t i = 0; i < renderableObjects->size(); i++){
-			RenderableObject* obj = renderableObjects->at(i);
+			// don't render our pair
+			if(obj == this->m_pair->asRenderableObject()) continue;
 
-			// ignore if the portal is our pair
-			if(obj == this->m_pair->asRenderableObject() || obj == this->asRenderableObject()) continue;
-			
-			// render
+			// don't render ourselves on first pass only (active texture won't be populated)
+			if(i == 0 && obj == this->asRenderableObject()) continue; 
+
+			// draw object
 			obj->draw();
 		}
 
-		// if this isn't the first pass
-		/*if(i > 0){
-			// bind main framebuffer
-			glBindFramebuffer(GL_FRAMEBUFFER, this->m_mainFramebuffer);
-
-			// move camera up to place portal in the right place
-			// TODO: dear lord there has to be a faster way to do this
-			camera->applyGeneralObjectTransformation(inversePortalSpaceTransformation);
-			camera->updateViewProjectionMatrix();
-
-			// disable depth writing so that portals don't override portals in the back
-			glDepthMask(GL_FALSE);
-
-			// draw just portal
-			this->draw();
-
-			// reenable depth writing
-			glDepthMask(GL_TRUE);
-
-			// move camera back
-			camera->applyGeneralObjectTransformation(portalSpaceTransformation);
-		}*/
-	}
-
-	Knee::GeneralObject inverseTotalTransformation = totalTransformation.getInverseGeneralObject();
-
-	camera->applyGeneralObjectTransformation(inverseTotalTransformation);
-	camera->updateViewProjectionMatrix();
-
-	// for additional, lower cost detail, we can take the texture that was rendered to the last portal in the line and recursively re-render it at further values
-	if(Knee::VisualPortal::RECURSIVE_PORTAL_RENDER_COUNT > 0){
-		// bind to aux framebuffer
-		glBindFramebuffer(GL_FRAMEBUFFER, this->m_auxFramebuffer);
-
-		// translate the rendered portal to the furthest portal of the recursive rendering
-		Knee::GeneralObject t = inverseTotalTransformation;
-
-		t.applyGeneralObjectTransformation(portalSpaceTransformation);
-
-		Knee::GeneralObject it = t.getInverseGeneralObject();
-
-		this->applyGeneralObjectTransformation(t);
-
-		// apply additional transformation to where new portal is placed
-		//this->getShaderProgram()->setUniformMat4("u_additionalModel", t.getModelMatrix());
-		this->getShaderProgram()->setUniformMat4("u_additionalModel", inversePortalSpaceTransformation.getModelMatrix());
-
-		// 1. render portal to aux framebuffer
-		// 2. copy framebuffer to aux texture, use aux texture as portal texture
-		// 3. repeat for n steps
-		// 4. render final portal to main framebuffer using secondary texture
-
-		this->setTexture(this->m_auxTexture);
-
-		// temporarily allow equal values to pass
-		// this allows us to repeatedly write over a previous polygon below
-		glDepthFunc(GL_LEQUAL);
-
-		// also disable writing just for convenience
-		glDepthMask(GL_FALSE);
-
-		glBindTexture(GL_TEXTURE_2D, this->m_auxTexture->getGLTexture());
-
-		for(uint32_t i = 0; i < Knee::VisualPortal::RECURSIVE_PORTAL_RENDER_COUNT; i++){
-			// this will copy pixels from the currently bound framebuffer into the secondary texture
-			glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, this->m_auxTexture->getWidth(), this->m_auxTexture->getHeight(), 0);
-
-			this->draw();
-		}
-
-		// switch depth function back to less
-		glDepthFunc(GL_LESS);
-
-		// reenable depth writing
-		glDepthMask(GL_TRUE);
-
-		this->setTexture(this->m_secondaryTexture);
-
-		this->applyGeneralObjectTransformation(it);
-		
-		this->getShaderProgram()->setUniformMat4("u_additionalModel", glm::mat4(1));
-
-		// bind main framebuffer
-		glBindFramebuffer(GL_FRAMEBUFFER, this->m_mainFramebuffer);
-
-		camera->applyGeneralObjectTransformation(totalTransformation);
+		// move camera back
 		camera->applyGeneralObjectTransformation(inversePortalSpaceTransformation);
 		camera->updateViewProjectionMatrix();
 
-		// disable depth writing so that portals don't override portals in the back
-		glDepthMask(GL_FALSE);
-
-		// draw just portal
-		this->draw();
-
-		// reenable depth writing
-		glDepthMask(GL_TRUE);
-
-		// move camera back
-		camera->applyGeneralObjectTransformation(portalSpaceTransformation);
-		camera->applyGeneralObjectTransformation(inverseTotalTransformation);
-		camera->updateViewProjectionMatrix();
+		// flip active texture
+		activeTexture = inactiveTexture;
 	}
 
-	// set texture back to default
-	this->setTexture(mainFramebufferTexture);
-
-	// go back to default framebuffer
+	std::cout << glm::to_string(camera->getPosition()) << std::endl << std::endl;
+	
+	// reset to default framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	// set our texture to whichever was rendered to last
+	// activeTexture because inactiveTexture is rendered to before being flipped to the activeTexture at the end of the for loop
+	this->setTexture(textures[activeTexture]);
 }
 
 void Knee::VisualPortal::draw(){
-	// save model matrix
-	glm::mat4 model = this->getModelMatrix();
-
-	// set model matrix to identity
-	this->setModelMatrix(glm::mat4(1));
-
-	// manually assign model
-	this->getShaderProgram()->setUniformMat4("u_model", model);
+	// draw nothing if we're our own pair
+	if(this->isOwnPair()) return;
 
 	// draw
 	RenderableStaticGameObject::draw();
-
-	// set model matrix back to original
-	this->setModelMatrix(model);
 }
+
+bool Knee::VisualPortal::isOwnPair(){
+	return this->m_pair == this;
+}
+
 // -------------------- //
 // PlayerInputHandler //
 

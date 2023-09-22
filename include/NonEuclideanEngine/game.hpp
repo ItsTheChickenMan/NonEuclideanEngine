@@ -77,19 +77,12 @@ namespace Knee {
 	// a "visual portal" is a surface "paired" to another visual portal.  the portal renders what would be seen through it if light travelled through the pair of portals, or in other words, it "looks" into the paired portal
 	// this effect is only visual, and does not interact with the player
 	class VisualPortal : public RenderableStaticGameObject {
-		// how many times to re-render the world looking at our own portal
-		// more expensive than texture sampling
-		// NOTE: currently only works for either 0 or 1
-		// FIXME: make work for numbers other than 0 or 1
-		// problem at the moment is that the current method works for just 1 iteration because it renders the portal to the main framebuffer, which loses all of the depth data for what was rendered in the portal and preventing us from properly rendering the portal behind it since everything renders to the depth buffer
-		// to work for more than 1, the only solution I can think of right now is to either somehow start from the back and move forward, or to do some weird depth buffer manipulation (maybe bind main renderbuffer to secondary framebuffer?)
-		const static uint32_t RECURSIVE_WORLD_RENDER_COUNT = 1;
-
-		// how many times to recursively redraw just the portal, sampling from the current framebuffer and using mapped texture coordinates from the last rendered world portal
-		// this works well if the entire last visible portal is visible on screen and is small.  then, the shader can sample the texture of the last visible portal and shift the portal back.
-		// this doesn't work at all if the last visible portal is not entirely on the screen, since the shader does not have a full texture to sample from.  additionally, artifacts become very noticeable
-		// this is considerably less expensive than re-rendering the entire world multiple times, so it's best to recursively render the world as little as possible and then rely on this to fill in any gaps
-		const static uint32_t RECURSIVE_PORTAL_RENDER_COUNT = 8;
+		// how many times to re-render the world when looking at our own portal
+		// basically, how many portals deep we want an infinite hallway of our own portal to be
+		// higher the number --> greater the performance dip
+		// TODO: add checks to only recursively render if we're positive that we're looking at our own portal
+		// TODO: add checks to limit the amount of objects we have to re-render
+		const static uint32_t RECURSIVE_WORLD_RENDER_COUNT = 12;
 
 		// the paired portal used to determine what the camera should see when viewing this portal.  a paired portal does not have to pair with this portal in order to work
 		// a portal can also pair with itself, which is effectively the same as not existing at all (won't be rendered).  this can be useful for portals that you want to use as an output for another portal but you don't want to pair back (one way hallway sort of effect)
@@ -104,8 +97,9 @@ namespace Knee {
 		uint32_t m_auxRenderbuffer;
 
 		// secondary texture used for aux framebuffer
-		Knee::Texture2D* m_secondaryTexture;
+		Knee::Texture2D* m_mainTexture;
 		
+		// another secondary texture
 		Knee::Texture2D* m_auxTexture;
 
 		public:
@@ -120,6 +114,8 @@ namespace Knee {
 			void loadPortalTexture(std::vector<RenderableObject*>* renderableObjects, Knee::RenderableObjectShaderProgram* renderableObjectShaderProgramWithDepth);
 
 			void draw();
+
+			bool isOwnPair();
 	};
 
 
