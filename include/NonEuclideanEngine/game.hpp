@@ -14,17 +14,22 @@ namespace Knee {
 	// classes //
 	
 	// a game object that does not move and is not affected by physics, but can still interact with other game objects.
-	class StaticGameObject : public GeneralObject {
+	class StaticGameObject : public virtual GeneralObject {
 		public:
 			StaticGameObject();
 			virtual ~StaticGameObject();
+
+			GeneralObject* asGeneralObject();
 	};
 	
 	// like a static game object, but now you can see it!
 	class RenderableStaticGameObject : public virtual StaticGameObject, public RenderableObject {
 		public:
-			RenderableStaticGameObject(Knee::VertexData*);
+			RenderableStaticGameObject(Knee::VertexData*, Knee::Texture2D*);
 			virtual ~RenderableStaticGameObject();
+
+			Knee::RenderableObject* asRenderableObject();
+			Knee::StaticGameObject* asStaticGameObject();
 	};
 	
 	// a game object that can physically interact with a game and be affected by physics.
@@ -39,6 +44,8 @@ namespace Knee {
 			GameObject(double);
 			virtual ~GameObject();
 			
+			Knee::StaticGameObject* asStaticGameObject();
+
 			double getMass();
 			void setMass(double);
 		
@@ -62,19 +69,57 @@ namespace Knee {
 		// might be some extra data in here at some point?
 		
 		public:
-			RenderableGameObject(Knee::VertexData*);
-		
-			Knee::RenderableObject* asRenderableObject();			
+			RenderableGameObject(Knee::VertexData*, Knee::Texture2D*);
+
+			GameObject* asGameObject();	
 	};
 	
-	// the backbone of non-euclidean space.  allows the player to seamlessly teleport between paired portals and see the other side via portal shader
-	class Portal : public RenderableGameObject {
+	// a "visual portal" is a surface "paired" to another visual portal.  the portal renders what would be seen through it if light travelled through the pair of portals, or in other words, it "looks" into the paired portal
+	// this effect is only visual, and does not interact with the player
+	class VisualPortal : public RenderableStaticGameObject {
+		// how many times to re-render the world looking at our own portal
+		// more expensive than texture sampling
+		// NOTE: currently only works for either 0 or 1
+		// FIXME: make work for numbers other than 0 or 1
+		// problem at the moment is that the current method works for just 1 iteration because it renders the portal to the main framebuffer, which loses all of the depth data for what was rendered in the portal and preventing us from properly rendering the portal behind it since everything renders to the depth buffer
+		// to work for more than 1, the only solution I can think of right now is to either somehow start from the back and move forward, or to do some weird depth buffer manipulation (maybe bind main renderbuffer to secondary framebuffer?)
+		const static uint32_t RECURSIVE_WORLD_RENDER_COUNT = 1;
+
+		// how many times to recursively redraw just the portal, sampling from the current framebuffer and using mapped texture coordinates from the last rendered world portal
+		// this works well if the entire last visible portal is visible on screen and is small.  then, the shader can sample the texture of the last visible portal and shift the portal back.
+		// this doesn't work at all if the last visible portal is not entirely on the screen, since the shader does not have a full texture to sample from.  additionally, artifacts become very noticeable
+		// this is considerably less expensive than re-rendering the entire world multiple times, so it's best to recursively render the world as little as possible and then rely on this to fill in any gaps
+		const static uint32_t RECURSIVE_PORTAL_RENDER_COUNT = 8;
+
+		// the paired portal used to determine what the camera should see when viewing this portal.  a paired portal does not have to pair with this portal in order to work
+		// a portal can also pair with itself, which is effectively the same as not existing at all (won't be rendered).  this can be useful for portals that you want to use as an output for another portal but you don't want to pair back (one way hallway sort of effect)
+		Knee::VisualPortal* m_pair;
+
+		// main rendering framebuffer + renderbuffer used for rendering the final portal texture
+		uint32_t m_mainFramebuffer;
+		uint32_t m_mainRenderbuffer;
+
+		// auxiliary framebuffer + renderbuffer used for rendering the world recursively when the portal has to visualize itself
+		uint32_t m_auxFramebuffer;
+		uint32_t m_auxRenderbuffer;
+
+		// secondary texture used for aux framebuffer
+		Knee::Texture2D* m_secondaryTexture;
 		
+		Knee::Texture2D* m_auxTexture;
 
 		public:
-			Portal(Knee::VertexData*);
+			VisualPortal(Knee::VertexData* vertexData, uint32_t screenWidth, uint32_t screenHeight);
+			~VisualPortal();
 
-			bool isVisible(Knee::PerspectiveCamera*);
+			Knee::RenderableStaticGameObject* asRenderableStaticGameObject();
+
+			// pair another portal with this portal.  can pass self in order to create a blank portal
+			void pairVisualPortal(Knee::VisualPortal* portal);
+
+			void loadPortalTexture(std::vector<RenderableObject*>* renderableObjects, Knee::RenderableObjectShaderProgram* renderableObjectShaderProgramWithDepth);
+
+			void draw();
 	};
 
 
@@ -89,7 +134,8 @@ namespace Knee {
 			{ KEYBIND_STRAFERIGHT, SDL_SCANCODE_D },
 			{ KEYBIND_UP, SDL_SCANCODE_SPACE },
 			{ KEYBIND_DOWN, SDL_SCANCODE_LSHIFT },
-			{ KEYBIND_SPRINT, SDL_SCANCODE_Q }
+			{ KEYBIND_SPRINT, SDL_SCANCODE_Q },
+			{ KEYBIND_UNLOCK_CURSOR, SDL_SCANCODE_ESCAPE }
 		};
 		
 		// all keystates
@@ -111,6 +157,7 @@ namespace Knee {
 			static const uint32_t KEYBIND_UP;
 			static const uint32_t KEYBIND_DOWN;
 			static const uint32_t KEYBIND_SPRINT;
+			static const uint32_t KEYBIND_UNLOCK_CURSOR;
 			
 			PlayerInputHandler();
 			
@@ -169,7 +216,7 @@ namespace Knee {
 		double m_mouseSensitivity = 1.0; // multiplied by 1/500, then multiplied by mouse delta in pixels
 		
 		double m_playerSpeed = 2.0; // general speed factor (units tbd)
-		double m_sprintMultiplier = 2.0; // how much speed is multiplied by when sprint bind is pressed
+		double m_sprintMultiplier = 3.0; // how much speed is multiplied by when sprint bind is pressed
 		
 		// input handler
 		Knee::PlayerInputHandler m_inputHandler;
@@ -182,6 +229,7 @@ namespace Knee {
 			
 			// returns true if mouse is locked, false otherwise.
 			// if the mouse isn't locked currently, it locks the mouse if the mouse has just been pressed
+			// if the mouse is locked currently, it unlocks it if KEYBIND_UNLOCK_CURSOR is pressed
 			bool checkMouseLock();
 			
 			// restricts the player's x rotation to between -X_ROTATION_LIMIT and X_ROTATION_LIMIT (called automatically during update())
@@ -207,19 +255,32 @@ namespace Knee {
 		static const std::string RENDERABLE_GAMEOBJECT_SHADER_ROOT;
 		static const std::string RENDERABLE_GAMEOBJECT_VERTEX_SHADER_PATH;
 		static const std::string RENDERABLE_GAMEOBJECT_FRAGMENT_SHADER_PATH;
-	
+		static const std::string VISUAL_PORTAL_SHADER_ROOT;
+		static const std::string VISUAL_PORTAL_VERTEX_SHADER_PATH;
+		static const std::string VISUAL_PORTAL_FRAGMENT_SHADER_PATH;
+		static const std::string RENDERABLE_GAMEOBJECT_WITH_DEPTH_SHADER_ROOT;
+		static const std::string RENDERABLE_GAMEOBJECT_WITH_DEPTH_VERTEX_SHADER_PATH;
+		static const std::string RENDERABLE_GAMEOBJECT_WITH_DEPTH_FRAGMENT_SHADER_PATH;
+		
 		// the player
 		Knee::Player m_player;
 		
+		// map of all static game objects, mapped by id
+		std::map<std::string, StaticGameObject*> m_staticGameObjects;
+
 		// map of all game objects, mapped by id
 		std::map<std::string, GameObject*> m_gameObjects;
 		
-		// list of all renderable game objects
-		// every object in this list should also be in m_gameObjects, therefore, this list should only be used for rendering and all other logic should use the m_gameObjects list
-		std::vector<RenderableGameObject*> m_renderableGameObjects;
+		// list of all renderable objects, added to whenever a type of renderable game object is added
+		std::vector<RenderableObject*> m_renderableGameObjects;
 		
+		// map of all visual portals, mapped by id
+		std::vector<VisualPortal*> m_visualPortals;
+
 		// shaders
 		Knee::RenderableObjectShaderProgram m_renderableGameObjectShaderProgram;
+		Knee::RenderableObjectShaderProgram m_visualPortalShaderProgram;
+		Knee::RenderableObjectShaderProgram m_renderableGameObjectWithDepthShaderProgram;
 
 		public:
 			Game(uint32_t, uint32_t);
@@ -229,18 +290,27 @@ namespace Knee {
 			
 			void initialize();
 			
+			Knee::StaticGameObject* getStaticGameObject(std::string);
 			Knee::GameObject* getGameObject(std::string);
 			
-			void addGameObject(std::string, GameObject*);
-			void addRenderableGameObject(std::string, RenderableGameObject*);
+			void addStaticGameObject(std::string id, StaticGameObject* obj);
+			void addGameObject(std::string id, GameObject* obj);
+
+			void addRenderableStaticGameObject(std::string id, RenderableStaticGameObject* obj);
+			void addRenderableGameObject(std::string id, RenderableGameObject* obj);
 			
+			void addVisualPortal(std::string id, VisualPortal* portal);
+
 			void updateGameObjects(double);
 			void updatePlayer(double);
 			
-			void renderRenderableGameObjects();
+			// renders both static and non-static game objects
+			void renderAllRenderableGameObjects();
+			void updateVisualPortals();
+
 			void renderScene();
 			
-			Knee::PerspectiveCamera* getCamera();
+			Knee::PerspectiveCamera* getPlayerCamera();
 			void updateCamera();
 			
 			void processEvent(SDL_Event&);

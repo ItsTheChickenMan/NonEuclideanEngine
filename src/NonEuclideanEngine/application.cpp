@@ -4,6 +4,8 @@
 #include <NonEuclideanEngine/application.hpp>
 #include <NonEuclideanEngine/misc.hpp>
 
+#include <SDL2/SDL_image.h>
+
 #include <iostream>
 #include <string>
 #include <cassert>
@@ -26,6 +28,11 @@ void Knee::Application::initialize(){
 		std::cout << Knee::ERROR_PREFACE << SDL_GetError();
 	}
 	
+	// initialize image subsystem
+	if(IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG) < 0){
+		std::cout << Knee::ERROR_PREFACE << SDL_GetError();
+	}
+
 	// set GL attributes necessary for creating window
 	// using OpenGL 3.3
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -53,7 +60,7 @@ void Knee::Application::initialize(){
 	flags |= SDL_WINDOW_SHOWN;
 	flags |= SDL_WINDOW_OPENGL;
 	
-	this->m_window = SDL_CreateWindow(this->m_windowTitle.c_str(), 20, 50, this->m_windowWidth, this->m_windowHeight, flags);
+	this->m_window = SDL_CreateWindow(this->m_windowTitle.c_str(), 600, 200, this->m_windowWidth, this->m_windowHeight, flags);
 	
 	assert(this->m_window != NULL);
 	
@@ -84,6 +91,9 @@ void Knee::Application::quit(){
 	// free window
 	SDL_DestroyWindow(this->m_window);
 	
+	// call image quit
+	IMG_Quit();
+
 	// call quit
 	SDL_Quit();
 }

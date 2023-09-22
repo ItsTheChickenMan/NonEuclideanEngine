@@ -1,6 +1,7 @@
 /build
 /.vscode
 /.git
+.code-workspace
 
 # Prerequisites
 *.d

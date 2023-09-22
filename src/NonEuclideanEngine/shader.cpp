@@ -8,7 +8,7 @@
 #include <math.h>
 
 // default max texture units (none)
-int32_t Knee::ShaderProgram::m_maxTextureUnits = 0;
+int32_t Knee::ShaderProgram::MAX_TEXTURE_UNITS = 0;
 
 // vertex attributes
 const std::string Knee::VertexData::VA_POSITION_STR = "p";
@@ -62,15 +62,16 @@ Knee::VertexData::VertexData(float* data, uint32_t vertexCount, GLsizeiptr dataS
 	uint32_t texCoordSize = hasTexCoords ? Knee::VertexData::VA_TEXCOORD_SIZE : 0;
 	uint32_t normalSize = hasNormals ? Knee::VertexData::VA_NORMAL_SIZE : 0;
 	
+	uint32_t stride = positionSize + texCoordSize + normalSize;
+
 	// vertex position pointer
 	if(hasPositions){
-		uint32_t stride = texCoordSize + normalSize;
 		uint32_t offset = 0;
 		
 		if(positionIndex == 0){
 			offset = 0;
 		} else if(positionIndex == 2){
-			offset = stride;
+			offset = texCoordSize + normalSize;;
 		} else {
 			if(hasTexCoords && texCoordIndex == 0){
 				offset = texCoordSize;
@@ -78,21 +79,20 @@ Knee::VertexData::VertexData(float* data, uint32_t vertexCount, GLsizeiptr dataS
 				offset = normalSize;
 			}
 		}
-		
+
+		glVertexAttribPointer(Knee::VertexData::VA_POSITION_INDEX, positionSize, GL_FLOAT, GL_FALSE, stride * sizeof(float), (GLvoid*)(offset * sizeof(float)));
+	
 		glEnableVertexAttribArray(Knee::VertexData::VA_POSITION_INDEX);
-		
-		glVertexAttribPointer(Knee::VertexData::VA_POSITION_INDEX, Knee::VertexData::VA_POSITION_SIZE, GL_FLOAT, GL_FALSE, stride * sizeof(float), (GLvoid*)(offset * sizeof(float)));
 	}
 	
 	// vertex tex coords pointer
 	if(hasTexCoords){
-		uint32_t stride = positionSize + normalSize;
 		uint32_t offset = 0;
 		
 		if(texCoordIndex == 0){
 			offset = 0;
 		} else if(texCoordIndex == 2){
-			offset = stride;
+			offset = positionSize + normalSize;
 		} else {
 			if(hasPositions && positionIndex == 0){
 				offset = positionSize;
@@ -101,20 +101,19 @@ Knee::VertexData::VertexData(float* data, uint32_t vertexCount, GLsizeiptr dataS
 			}
 		}
 		
+		glVertexAttribPointer(Knee::VertexData::VA_TEXCOORD_INDEX, texCoordSize, GL_FLOAT, GL_FALSE, stride * sizeof(float), (GLvoid*)(offset * sizeof(float)));
+
 		glEnableVertexAttribArray(Knee::VertexData::VA_TEXCOORD_INDEX);
-		
-		glVertexAttribPointer(Knee::VertexData::VA_TEXCOORD_INDEX, Knee::VertexData::VA_TEXCOORD_SIZE, GL_FLOAT, GL_FALSE, stride * sizeof(float), (GLvoid*)(offset * sizeof(float)));
 	}
 
 	// vertex normals pointer
 	if(hasNormals){
-		uint32_t stride = positionSize + texCoordSize;
 		uint32_t offset = 0;
 		
 		if(normalIndex == 0){
 			offset = 0;
 		} else if(normalIndex == 2){
-			offset = stride;
+			offset = positionSize + texCoordSize;
 		} else {
 			if(hasPositions && positionIndex == 0){
 				offset = positionSize;
@@ -125,7 +124,7 @@ Knee::VertexData::VertexData(float* data, uint32_t vertexCount, GLsizeiptr dataS
 		
 		glEnableVertexAttribArray(Knee::VertexData::VA_NORMAL_INDEX);
 		
-		glVertexAttribPointer(Knee::VertexData::VA_NORMAL_INDEX, Knee::VertexData::VA_NORMAL_SIZE, GL_FLOAT, GL_FALSE, stride * sizeof(float), (GLvoid*)(offset * sizeof(float)));
+		glVertexAttribPointer(Knee::VertexData::VA_NORMAL_INDEX, normalSize, GL_FLOAT, GL_FALSE, stride * sizeof(float), (GLvoid*)(offset * sizeof(float)));
 	}
 	
 	// unbind everything
@@ -167,10 +166,41 @@ bool Knee::ShaderProgram::isCompiled(){
 	return this->m_compiled;
 }
 
+uint32_t Knee::ShaderProgram::getMaxTextureUnits(){
+	return Knee::ShaderProgram::MAX_TEXTURE_UNITS;
+}
+
 // make sure this is only called once graphics have been properly initialized
 void Knee::ShaderProgram::loadMaxTextureUnits(){
 	// get max supported texture units
-	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &Knee::ShaderProgram::m_maxTextureUnits);
+	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &Knee::ShaderProgram::MAX_TEXTURE_UNITS);
+}
+
+// bind a 2D texture to a uniform in this shader program
+void Knee::ShaderProgram::bindTexture2D(std::string uniformName, Knee::Texture2D* texture){
+	// check if we would be exceeding the maximum texture units supported
+	if(this->m_boundTextureCount >= this->getMaxTextureUnits()){
+		std::cout << Knee::WARNING_PREFACE << "Attempted to bind more textures than maximum supported (" << this->getMaxTextureUnits() << ")" << std::endl;
+		return;
+	}
+
+	// set active texture
+	glActiveTexture(GL_TEXTURE0 + this->m_boundTextureCount);
+
+	// bind the texture name to the working 2D texture
+	glBindTexture(GL_TEXTURE_2D, texture->getGLTexture());
+
+	// set uniform
+	glUniform1i(this->getUniformLocation(uniformName), this->m_boundTextureCount);
+
+	// increment number of bound textures
+	this->m_boundTextureCount++;
+}
+
+// reset the number of currently bound textures
+void Knee::ShaderProgram::resetBoundTextures(){
+	// reset bound texture count
+	this->m_boundTextureCount = 0;
 }
 
 // create a shader of the provided type from the provided source path and store it until compilation
@@ -387,21 +417,6 @@ void Knee::ShaderProgram::drawVertexData(const Knee::VertexData* vertexData){
 }
 
 // -------------------- //
-// RenderableObject //
-
-Knee::RenderableObject::RenderableObject(Knee::VertexData* vertexData) : m_vertexData(vertexData) {}
-
-// NOTE: m_vertexData is constant in RenderableObject, so do not attempt to modify
-const Knee::VertexData* Knee::RenderableObject::getVertexData() const {
-	return this->m_vertexData;
-}
-
-void Knee::RenderableObject::use(){
-	this->m_vertexData->use();
-}
-
-
-// -------------------- //
 // Camera //
 
 Knee::Camera::Camera(){
@@ -472,17 +487,25 @@ void Knee::PerspectiveCamera::setPerspectiveProperties(float fov, float aspectRa
 // RenderableObjectShaderProgram //
 
 Knee::RenderableObjectShaderProgram::RenderableObjectShaderProgram(float fov, float aspectRatio, float near, float far) : Knee::ShaderProgram() {
-	this->m_camera.setPerspectiveProperties(fov, aspectRatio, near, far);
+	this->m_camera = new PerspectiveCamera();
+
+	this->m_camera->setPerspectiveProperties(fov, aspectRatio, near, far);
 }
 
+Knee::RenderableObjectShaderProgram::RenderableObjectShaderProgram(Knee::PerspectiveCamera* camera) : Knee::ShaderProgram(), m_camera(camera) {}
+
 Knee::PerspectiveCamera* Knee::RenderableObjectShaderProgram::getCamera(){
-	return &this->m_camera;
+	return this->m_camera;
 }
 
 // NOTE: this method will look for certain uniforms (but will silently continue if not found):
 // mvp - (projection * view * model) matrix
 // transposeInverseModel - matrix for transforming the normals such that they match the model after it is transformed by the model matrix.
-void Knee::RenderableObjectShaderProgram::drawRenderableObject(RenderableObject* renderableObject){
+/*void Knee::RenderableObjectShaderProgram::drawRenderableObject(RenderableObject* renderableObject){
+	// reset bound textures
+	// TODO: should probably have some kind of system in place to keep textures from previous binds
+	this->resetBoundTextures();
+
 	// calculate mvp matrix
 	glm::mat4 mvp = this->m_camera.getViewProjectionMatrix() * renderableObject->getModelMatrix();
 	
@@ -490,9 +513,68 @@ void Knee::RenderableObjectShaderProgram::drawRenderableObject(RenderableObject*
 	glm::mat4 tim = glm::transpose(glm::inverse(renderableObject->getModelMatrix()));
 	
 	// set uniforms
-	this->setUniformMat4("mvp", mvp);
+	this->setUniformMat4("u_mvp", mvp);
 	this->setUniformMat4("transposeInverseModel", tim);
 	
+	// bind texture if present
+	if(renderableObject->hasTexture()){
+		this->bindTexture2D("u_sampler", renderableObject->getTexture());
+	}
+
 	// draw vertex data
 	this->drawVertexData( renderableObject->getVertexData() );
+}*/
+
+// -------------------- //
+// RenderableObject //
+
+Knee::RenderableObject::RenderableObject(Knee::VertexData* vertexData, Knee::Texture2D* texture, Knee::RenderableObjectShaderProgram* program) : m_vertexData(vertexData), m_texture(texture), m_shaderProgram(program) {}
+
+Knee::RenderableObjectShaderProgram* Knee::RenderableObject::getShaderProgram(){
+	return this->m_shaderProgram;
+}
+
+void Knee::RenderableObject::setShaderProgram(RenderableObjectShaderProgram* program){
+	this->m_shaderProgram = program;
+}
+
+// NOTE: m_vertexData is constant in RenderableObject, so do not attempt to modify
+const Knee::VertexData* Knee::RenderableObject::getVertexData() const {
+	return this->m_vertexData;
+}
+
+Knee::Texture2D* Knee::RenderableObject::getTexture(){
+	return this->m_texture;
+}
+
+void Knee::RenderableObject::setTexture(Knee::Texture2D* texture){
+	this->m_texture = texture;
+}
+
+bool Knee::RenderableObject::hasTexture(){
+	return this->m_texture != NULL;
+}
+
+void Knee::RenderableObject::draw(){
+	// reset bound textures in shader program
+	// TODO: should probably have some kind of system in place to keep textures from previous binds
+	this->m_shaderProgram->resetBoundTextures();
+
+	// calculate mvp matrix
+	glm::mat4 mvp = this->m_shaderProgram->getCamera()->getViewProjectionMatrix() * this->getModelMatrix();
+	
+	// calculate transposeInverseModel matrix
+	glm::mat4 tim = glm::transpose(glm::inverse(this->getModelMatrix()));
+	
+	// set uniforms
+	this->m_shaderProgram->setUniformMat4("u_mvp", mvp);
+	this->m_shaderProgram->setUniformMat4("transposeInverseModel", tim);
+	
+	// bind texture if present
+	if(this->hasTexture()){
+		this->m_shaderProgram->bindTexture2D("u_sampler", this->getTexture());
+	}
+
+	// draw vertex data
+	this->m_shaderProgram->drawVertexData( this->getVertexData() );
 }

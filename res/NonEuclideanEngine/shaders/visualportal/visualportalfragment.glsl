@@ -1,7 +1,7 @@
 #version 330 core
 
 // in vars
-in vec2 TextureCoordinates;
+noperspective in vec2 TextureCoordinates;
 
 // out vars
 out vec4 FragColor;
@@ -12,6 +12,6 @@ uniform sampler2D u_sampler;
 void main(){
 	vec4 textureColor = texture(u_sampler, TextureCoordinates);
 
-	//FragColor = textureColor;
-	FragColor = vec4(TextureCoordinates * vec2(textureColor), 0, 1);
+	FragColor = textureColor;
+	//FragColor = vec4(tex, 0, 1);
 }

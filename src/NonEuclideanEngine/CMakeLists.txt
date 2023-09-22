@@ -2,6 +2,7 @@ add_library(NonEuclideanEngine
 	application.cpp
 	game.cpp
 	shader.cpp
+	texture.cpp
 	misc.cpp
 	fileio.cpp
 	glad/glad.c
@@ -9,6 +10,7 @@ add_library(NonEuclideanEngine
 
 add_library(SDL2 SHARED IMPORTED)
 add_library(SDL2main STATIC IMPORTED)
+add_library(SDL2_image SHARED IMPORTED)
 
 set_target_properties(SDL2 PROPERTIES
 	IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/lib/SDL2/SDL2.dll
@@ -19,9 +21,15 @@ set_target_properties(SDL2main PROPERTIES
 	IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/lib/SDL2/libSDL2main.a
 )
 
+set_target_properties(SDL2_image PROPERTIES
+	IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/lib/SDL2/SDL2_image.dll
+	IMPORTED_IMPLIB ${CMAKE_SOURCE_DIR}/lib/SDL2/libSDL2_image.dll.a
+)
+
 target_link_libraries(NonEuclideanEngine PUBLIC opengl32)
 target_link_libraries(NonEuclideanEngine PUBLIC SDL2)
 target_link_libraries(NonEuclideanEngine PUBLIC SDL2main)
+target_link_libraries(NonEuclideanEngine PUBLIC SDL2_image)
 target_link_libraries(NonEuclideanEngine PUBLIC mingw32)
 
 target_include_directories(NonEuclideanEngine PUBLIC
@@ -38,6 +46,12 @@ install(DIRECTORY
 
 # SDL2
 install(IMPORTED_RUNTIME_ARTIFACTS SDL2
+	RUNTIME
+		DESTINATION ${CMAKE_BINARY_DIR}/bin
+)
+
+# SDL2 image
+install(IMPORTED_RUNTIME_ARTIFACTS SDL2_image
 	RUNTIME
 		DESTINATION ${CMAKE_BINARY_DIR}/bin
 )

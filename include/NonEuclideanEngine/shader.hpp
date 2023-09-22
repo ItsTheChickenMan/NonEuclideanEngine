@@ -1,5 +1,6 @@
 #pragma once
 
+#include <NonEuclideanEngine/texture.hpp>
 #include <NonEuclideanEngine/misc.hpp>
 
 #include <glad/glad.h>
@@ -47,12 +48,12 @@ namespace Knee {
 			
 			uint32_t getVertexCount() const ;
 			
-			void use() const ;
+			void use() const;
 	};
 	
 	class ShaderProgram {
 		// PRIVATE MEMBERS //
-		static int32_t m_maxTextureUnits; // maximum supported texture units (implementation dependent)
+		static int32_t MAX_TEXTURE_UNITS; // maximum supported texture units (implementation dependent)
 		
 		// program reference
 		GLuint m_program;
@@ -63,10 +64,10 @@ namespace Knee {
 		
 		// uniform management
 		std::map<std::string, GLint> m_uniforms;
-		
-		// texture management
-		uint32_t m_textureUnits = 0; // number of currently bound texture units
-		
+
+		// amount of textures bound currently
+		uint32_t m_boundTextureCount;
+
 		protected:
 			GLchar* getShaderInfoLog(GLuint);
 			GLchar* getProgramInfoLog();
@@ -75,9 +76,13 @@ namespace Knee {
 		public:
 			ShaderProgram();
 			~ShaderProgram();
-		
-			static void loadMaxTextureUnits();
 			
+			static void loadMaxTextureUnits();
+			uint32_t getMaxTextureUnits();
+			
+			void bindTexture2D(std::string, Knee::Texture2D*);
+			void resetBoundTextures();
+
 			bool isCompiled();
 			GLint getUniformLocation(std::string);
 			
@@ -94,20 +99,6 @@ namespace Knee {
 			
 			void drawArrays(uint32_t);
 			void drawVertexData(const Knee::VertexData*);
-	};
-	
-	
-	// abstract class defining RenderableObjects and their properties.  Any object that you want to be renderable by a RenderableObjectShaderProgram should inherit from this class and overload the appropriate methods.
-	class RenderableObject : public virtual GeneralObject {
-		// vertex data to be used when rendering
-		const VertexData* m_vertexData;
-	
-		public:
-			RenderableObject(Knee::VertexData*);
-
-			const Knee::VertexData* getVertexData() const;
-		
-			void use();
 	};
 	
 	class Camera : public GeneralObject {
@@ -148,18 +139,46 @@ namespace Knee {
 			PerspectiveCamera();
 			
 			// automatically calls updateViewProjectionMatrix()
-			void setPerspectiveProperties(float, float, float, float);
+			void setPerspectiveProperties(float fov, float aspectRatio, float near, float far);
 	};
 	
 	// class for rendering RenderableObjects, rendered with perspective projection from the viewpoint of a camera.
 	class RenderableObjectShaderProgram : public ShaderProgram {
-		Knee::PerspectiveCamera m_camera;
+		Knee::PerspectiveCamera* m_camera;
 		
 		public:
-			RenderableObjectShaderProgram(float, float, float, float);
-		
+			RenderableObjectShaderProgram(float fov, float aspectRatio, float near, float far);
+
+			// link an existing camera to this shader
+			RenderableObjectShaderProgram(Knee::PerspectiveCamera* camera);
+
 			Knee::PerspectiveCamera* getCamera();
+	};
+
+	// abstract class defining RenderableObjects and their properties.  Any object that you want to be renderable by a RenderableObjectShaderProgram should inherit from this class and overload the appropriate methods.
+	class RenderableObject : public virtual GeneralObject {
+		// vertex data to be used when rendering
+		const VertexData* m_vertexData;
+
+		// shader program to use when rendering
+		RenderableObjectShaderProgram* m_shaderProgram;
+
+		protected:
+			// texture to be used when rendering
+			Knee::Texture2D* m_texture;
 			
-			void drawRenderableObject(RenderableObject*);
+		public:
+			RenderableObject(VertexData* vertexData, Texture2D* texture, RenderableObjectShaderProgram* program);
+
+			RenderableObjectShaderProgram* getShaderProgram();
+			void setShaderProgram(RenderableObjectShaderProgram* program);
+
+			const Knee::VertexData* getVertexData() const;
+
+			Knee::Texture2D* getTexture();
+			void setTexture(Knee::Texture2D* texture);
+			bool hasTexture();
+
+			virtual void draw();
 	};
 }

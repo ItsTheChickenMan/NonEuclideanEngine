@@ -7,16 +7,21 @@
 
 Knee::DeltaTimer::DeltaTimer(){
 	this->resetDelta();
+	this->resetTime();
 }
 
 void Knee::DeltaTimer::resetDelta(){
 	this->m_timeOfLastReset = this->m_deltaTimer.now();
 }
 
+void Knee::DeltaTimer::resetTime(){
+	this->m_startTime = this->getTime();
+}
+
 double Knee::DeltaTimer::getTime(){
 	std::chrono::time_point<std::chrono::high_resolution_clock, std::chrono::duration<double>> now = this->m_deltaTimer.now();
 	
-	return now.time_since_epoch().count();
+	return now.time_since_epoch().count() - this->m_startTime;
 }
 
 double Knee::DeltaTimer::getDelta(){
@@ -81,15 +86,51 @@ void Knee::GeneralObject::changeRotation(glm::vec3 change){
 void Knee::GeneralObject::changeScale(glm::vec3 change){
 	glm::vec3 old = this->getScale();
 	
-	this->setScale(old + change);
+	this->setScale(old * change);
+}
+
+Knee::GeneralObject Knee::GeneralObject::getInverseGeneralObject(){
+	Knee::GeneralObject obj;
+
+	obj.setPosition(-this->getPosition());
+	obj.setRotation(-this->getRotation());
+	obj.setScale(1.0f / this->getScale());
+
+	return obj;
+}
+		
+void Knee::GeneralObject::addGeneralObject(GeneralObject obj){
+	this->changePosition(obj.getPosition());
+	this->changeRotation(obj.getRotation());
+	this->changeScale(obj.getScale());
+}
+
+void Knee::GeneralObject::subtractGeneralObject(GeneralObject obj){
+	this->addGeneralObject(obj.getInverseGeneralObject());
+}
+
+void Knee::GeneralObject::applyGeneralObjectTransformation(GeneralObject obj){
+	// apply translation matrix to our position
+	this->m_position = glm::vec3(obj.getTranslationMatrix() * glm::vec4(this->m_position, 1));
+
+	// apply rotation matrix to our rotation
+	this->m_rotation = glm::vec3(obj.getRotationMatrix() * glm::vec4(this->m_rotation, 1));
+
+	// apply scale matrix to our scale
+	this->m_scale = glm::vec3(obj.getScaleMatrix() * glm::vec4(this->m_scale, 1));
+
+	// update model matrix
+	this->updateModelMatrix();
+}
+
+void Knee::GeneralObject::applyMatrixTransformation(glm::mat4 matrixTransformation){
+	// apply matrix transformation
+	this->m_modelMatrix = matrixTransformation * this->m_modelMatrix;
 }
 
 glm::mat4 Knee::GeneralObject::getTranslationMatrix(){
 	return glm::translate(glm::mat4(1), this->m_position);
 }
-
-#include <glm/gtx/string_cast.hpp>
-#include <iostream>
 
 glm::mat4 Knee::GeneralObject::getRotationMatrix(){
 	glm::mat4 out = glm::mat4(1);
@@ -107,17 +148,21 @@ glm::mat4 Knee::GeneralObject::getScaleMatrix(){
 
 glm::vec3 Knee::GeneralObject::getForwardVector(){
 	// apply rotation transformation to normalized vector
-	glm::vec4 un = this->getRotationMatrix() * glm::vec4(0, 0, 1, 0);
+	glm::vec4 un = this->getRotationMatrix() * glm::vec4(0, 0, 1, 1);
 	
-	// return just xyz (w component doesn't matter, shouldn't even have a value)
+	// return just xyz (w component doesn't matter)
 	return glm::vec3(un);
 }
 
 void Knee::GeneralObject::updateModelMatrix(){
 	// update with all the matrices
-	this->m_modelMatrix = this->getScaleMatrix() * this->getRotationMatrix() * this->getTranslationMatrix() * glm::mat4(1);
+	this->m_modelMatrix = this->getTranslationMatrix() * this->getRotationMatrix() * this->getScaleMatrix() * glm::mat4(1);
 }
 
 glm::mat4 Knee::GeneralObject::getModelMatrix(){
 	return this->m_modelMatrix;
+}
+
+void Knee::GeneralObject::setModelMatrix(glm::mat4 mat){
+	this->m_modelMatrix = mat;
 }
