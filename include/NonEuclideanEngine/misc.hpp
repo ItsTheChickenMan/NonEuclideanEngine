@@ -33,8 +33,7 @@ namespace Knee {
 			void pauseThread(double);
 	};
 
-	// any object with a position, rotation, and size in general 3D space.
-	// simply stores those 3 values as vec3s as well as a 4x4 model matrix which is updated whenever the former 3 values are changed.
+	// any object with a position, rotation, and scale in general 3D space.
 	class GeneralObject {
 		glm::vec3 m_position = glm::vec3(0);
 		glm::vec3 m_rotation = glm::vec3(0);
@@ -75,6 +74,7 @@ namespace Knee {
 			// it's also a bit slower since it has to update all of the values, recalculate the applicable transformation matrices, and multiply the 3 matrices together for the resulting transformation.
 			// while this is generally preferred, use applyMatrixTransformation if you're positive you don't need to access any of those values and you want to shave off a bit of time
 			void applyGeneralObjectTransformation(GeneralObject obj);
+			void applyGeneralObjectTransformation(GeneralObject obj, uint32_t n);
 
 			glm::mat4 getTranslationMatrix();
 			glm::mat4 getRotationMatrix();

@@ -113,14 +113,20 @@ void Knee::GeneralObject::subtractGeneralObject(GeneralObject obj){
 }
 
 void Knee::GeneralObject::applyGeneralObjectTransformation(GeneralObject obj){
-	// apply translation matrix to our position
-	this->m_position = glm::vec3(obj.getTranslationMatrix() * glm::vec4(this->m_position, 1));
+	this->applyGeneralObjectTransformation(obj, 1);
+}
 
-	// apply rotation matrix to our rotation
-	this->m_rotation = glm::vec3(obj.getRotationMatrix() * glm::vec4(this->m_rotation, 1));
+void Knee::GeneralObject::applyGeneralObjectTransformation(GeneralObject obj, uint32_t n){
+	for(; n != 0; n--){
+		// apply translation matrix to our position
+		this->setPosition(glm::vec3(obj.getTranslationMatrix() * glm::vec4(this->m_position, 1)));
 
-	// apply scale matrix to our scale
-	this->m_scale = glm::vec3(obj.getScaleMatrix() * glm::vec4(this->m_scale, 1));
+		// apply rotation matrix to our rotation
+		this->setRotation(glm::vec3(obj.getRotationMatrix() * glm::vec4(this->m_rotation, 1)));
+
+		// apply scale matrix to our scale
+		this->setScale(glm::vec3(obj.getScaleMatrix() * glm::vec4(this->m_scale, 1)));
+	}
 
 	// update model matrix
 	this->updateModelMatrix();
