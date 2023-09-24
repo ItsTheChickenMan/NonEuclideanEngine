@@ -160,53 +160,33 @@ void Knee::VisualPortal::pairVisualPortal(Knee::VisualPortal* portal){
 
 // loads the texture for the visual portal so it can be used for rendering
 void Knee::VisualPortal::loadPortalTexture(std::vector<RenderableObject*>* renderableObjects, Knee::RenderableObjectShaderProgram* renderableObjectShaderProgramWithDepth){
-	// FIXME: weird bug where camera gets moved down 3 units and back 1 unit?  this probably depends on portal positions + stuff somehow
-
 	// if we're paired to ourselves, do nothing
 	if(this->isOwnPair()) return;
 	
 	// calculate camera movement transformation
-	//Knee::GeneralObject portalSpaceTransformation = this->m_pair->asGeneralObject()->getInverseGeneralObject();
-	glm::mat4 portalSpaceMatrix = this->getModelMatrix() * glm::inverse(this->m_pair->getModelMatrix());
-	glm::mat4 inversePortalSpaceMatrix = glm::inverse(portalSpaceMatrix);
+	Knee::GeneralObject portalSpaceTransformation = this->asGeneralObject()->getInverseGeneralObject();
 
-	glm::mat4 totalTransformationMatrix = portalSpaceMatrix;
+	portalSpaceTransformation *= *this->m_pair->asGeneralObject();
 
-	for(uint32_t i = 0; i < Knee::VisualPortal::RECURSIVE_WORLD_RENDER_COUNT; i++){
-		totalTransformationMatrix = portalSpaceMatrix * totalTransformationMatrix;
-	}
-
-	//portalSpaceTransformation *= *this->m_pair->asGeneralObject();
-
-	//std::cout << "portal space transformations: \n" << glm::to_string(portalSpaceTransformation.getPosition()) << std::endl;
-
-	//Knee::GeneralObject inversePortalSpaceTransformation = portalSpaceTransformation.getInverseGeneralObject();
-	//glm::mat4 inversePortalSpaceMatrix = glm::inverse(portalSpaceTransformation.getModelMatrix());
-
-	//std::cout << glm::to_string(inversePortalSpaceTransformation.getPosition()) << std::endl;
+	// calculate inverse
+	Knee::GeneralObject inversePortalSpaceTransformation = portalSpaceTransformation.getInverseGeneralObject();
 
 	// initializes to 1 since we always render at least one side of the portal
-	//Knee::GeneralObject totalTransformation = portalSpaceTransformation;
+	Knee::GeneralObject totalTransformation = portalSpaceTransformation;
 
 	// calculate total transformation from recursive render requests
-	/*for(uint32_t i = 0; i < Knee::VisualPortal::RECURSIVE_WORLD_RENDER_COUNT; i++){
+	for(uint32_t i = 0; i < Knee::VisualPortal::RECURSIVE_WORLD_RENDER_COUNT; i++){
 		totalTransformation *= portalSpaceTransformation;
-	}*/
+	}
 
 	// get reference to camera
 	// this should be shared across all shader programs, so getting our own is okay
-	//Knee::PerspectiveCamera* camera = this->getShaderProgram()->getCamera();
-	
-	//std::cout << glm::to_string(totalTransformation.getPosition()) << "\n" << std::endl;
-
-	//std::cout << "camera rotations:\n" << "base: " << glm::to_string(camera->getRotation()) << std::endl;
+	Knee::PerspectiveCamera* camera = this->getShaderProgram()->getCamera();
 
 	// apply transformation to camera
 	// this moves it to the model it needs for the last portal in the line, and is then repeatedly moved back until it's at its original position
-	//camera->applyTransformation(totalTransformation);
-	//camera->updateViewProjectionMatrix();
-
-	//std::cout << "after portal transformation: " << glm::to_string(camera->getRotation()) << std::endl;
+	camera->applyTransformation(totalTransformation);
+	camera->updateViewProjectionMatrix();
 
 	// set brightness to precalculated brightness required
 	this->setBrightness(Knee::VisualPortal::RECURSE_PORTAL_BRIGHTNESS);
@@ -243,21 +223,13 @@ void Knee::VisualPortal::loadPortalTexture(std::vector<RenderableObject*>* rende
 			// don't render ourselves on first pass only (active texture won't be populated)
 			if(i == 0 && obj == this->asRenderableObject()) continue; 
 
-			// apply transformation
-			obj->applyMatrixTransformation(totalTransformationMatrix); 
-
 			// draw object
 			obj->draw();
-
-			obj->updateModelMatrix();
 		}
 
-		// move transformation
-		totalTransformationMatrix = inversePortalSpaceMatrix * totalTransformationMatrix;
-
 		// move camera back
-		//camera->applyTransformation(inversePortalSpaceTransformation);
-		//camera->updateViewProjectionMatrix();
+		camera->applyTransformation(inversePortalSpaceTransformation);
+		camera->updateViewProjectionMatrix();
 
 		// flip active texture
 		activeTexture = inactiveTexture;
@@ -266,8 +238,6 @@ void Knee::VisualPortal::loadPortalTexture(std::vector<RenderableObject*>* rende
 	// reset brightness
 	this->setBrightness(1.0);
 
-	//std::cout << "after inverse transformation: " << glm::to_string(camera->getRotation()) << "\n" << std::endl;
-	
 	// reset to default framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 

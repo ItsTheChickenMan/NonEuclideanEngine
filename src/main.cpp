@@ -176,15 +176,15 @@ int main(int argc, char* argv[]){
 
 	// assign properties
 	portal1.setPosition(glm::vec3(0, 2, -4));
-	portal1.setRotation(glm::vec3(0, glm::radians(2.f), 0));
+	portal1.setRotation(glm::vec3(0, glm::radians(0.f), 0));
 	portal1.setScale(glm::vec3(8, 2, 2));
 
 	//portal2.setPosition(glm::vec3(-20, 3, -3));
 	//portal2.setRotation(glm::vec3(glm::radians(45.f), 0, 0));
 	//portal2.setScale(glm::vec3(0.5, 0.5, 0.5));
 
-	portal2.setPosition(glm::vec3(0, 1.75, 4));
-	portal2.setRotation(glm::vec3(glm::radians(0.f), glm::radians(0.f), 0));
+	portal2.setPosition(glm::vec3(1.5, 2, 4));
+	portal2.setRotation(glm::vec3(glm::radians(-20.f), glm::radians(35.f), 0));
 	portal2.setScale(glm::vec3(8, 2, 2) * 0.75f);
 
 	// pair visual portals
