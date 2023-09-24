@@ -98,7 +98,7 @@ void Knee::PlayerInputHandler::processMouseMotionEvent(SDL_MouseMotionEvent& eve
 	int32_t xrel = event.xrel;
 	int32_t yrel = event.yrel;
 	
-	this->m_mouseMotion = glm::vec2((float)xrel, (float)yrel);
+	this->m_mouseMotion += glm::vec2((float)xrel, (float)yrel);
 }
 
 // process an event
