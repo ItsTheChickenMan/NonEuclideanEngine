@@ -1,6 +1,8 @@
 add_library(NonEuclideanEngine
 	application.cpp
 	game.cpp
+	player.cpp
+	gameobjects.cpp
 	shader.cpp
 	texture.cpp
 	misc.cpp
