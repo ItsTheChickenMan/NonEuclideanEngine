@@ -50,7 +50,7 @@ namespace Knee {
 		glm::mat4 m_modelMatrix = glm::mat4(1);
 		
 		public:
-			/*friend GeneralObject operator*(GeneralObject lhs, const GeneralObject& rhs){
+			friend GeneralObject operator*(GeneralObject lhs, const GeneralObject& rhs){
 				Knee::GeneralObject out;
 
 				out.applyTransformation(rhs);
@@ -63,8 +63,7 @@ namespace Knee {
 
 			void applyTransformation(GeneralObject t);
 
-			void updatePositionFromModelMatrix();
-			*/
+			void updateCachedValuesFromModelMatrix();
 
 			glm::vec3 getPosition() const ;
 			glm::vec3 getRotation() const ;
@@ -89,7 +88,10 @@ namespace Knee {
 			
 			// get the direction that this object is currently pointing in
 			glm::vec3 getForwardVector();
-			
+
+			// get the up direction of this object
+			glm::vec3 getUpVector();
+
 			void updateTranslationMatrix();
 			void updateRotationMatrix();
 			void updateScaleMatrix();
