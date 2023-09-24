@@ -93,56 +93,20 @@ Knee::VisualPortal::VisualPortal(Knee::VertexData* vertexData, uint32_t screenWi
 		NULL
 	)
 {
-	// NOTE: we keep m_texture NULL until loadPortalTexture is called, which assigns it to one of the aux textures
+	// texture is unassigned until loadPortalTexture is called
 	this->m_texture = NULL;
 
-	// create auxiliary texture
-	this->m_mainTexture = new Knee::Texture2D(screenWidth, screenHeight, GL_UNSIGNED_BYTE);
-
-	// framebuffer
-	glGenFramebuffers(1, &this->m_mainFramebuffer);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, this->m_mainFramebuffer);
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->m_mainTexture->getGLTexture(), 0);
-
-	// renderbuffer
-	glGenRenderbuffers(1, &this->m_mainRenderbuffer);
-	glBindRenderbuffer(GL_RENDERBUFFER, this->m_mainRenderbuffer); 
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screenWidth, screenHeight);  
-
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, this->m_mainRenderbuffer);
-
-	// create secondary texture for self rendering
-	this->m_auxTexture = new Knee::Texture2D(screenWidth, screenHeight, GL_UNSIGNED_BYTE);
-
-	// aux framebuffer
-	glGenFramebuffers(1, &this->m_auxFramebuffer);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, this->m_auxFramebuffer);
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->m_auxTexture->getGLTexture(), 0);
-
-	// aux renderbuffer
-	glGenRenderbuffers(1, &this->m_auxRenderbuffer);
-	glBindRenderbuffer(GL_RENDERBUFFER, this->m_auxRenderbuffer); 
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screenWidth, screenHeight);  
-
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, this->m_auxRenderbuffer);
-
-	// back to default renderbuffer
-	glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-	// back to default framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	// create framebuffers
+	this->m_mainFramebuffer = new Knee::Framebuffer2D(screenWidth, screenHeight);
+	this->m_auxFramebuffer = new Knee::Framebuffer2D(screenWidth, screenHeight);
 };
 
 Knee::VisualPortal::~VisualPortal(){
 	// free main texture
-	delete this->m_mainTexture;
+	delete this->m_mainFramebuffer;
 
 	// free aux texture
-	delete this->m_auxTexture;
+	delete this->m_auxFramebuffer;
 }
 
 Knee::RenderableStaticGameObject* Knee::VisualPortal::asRenderableStaticGameObject(){
@@ -191,8 +155,7 @@ void Knee::VisualPortal::loadPortalTexture(std::vector<RenderableObject*>* rende
 	// we need this because we flip between the main and aux texture repeatedly
 	uint32_t activeTexture = 0;
 
-	uint32_t framebuffers[] = {this->m_mainFramebuffer, this->m_auxFramebuffer};
-	Knee::Texture2D* textures[] = {this->m_mainTexture, this->m_auxTexture};
+	Knee::Framebuffer2D* framebuffers[] = {this->m_mainFramebuffer, this->m_auxFramebuffer};
 
 	// we run this for requested recurses + 1 times to make sure we render at least once
 	for(uint32_t i = 0; i < Knee::VisualPortal::RECURSIVE_WORLD_RENDER_COUNT+1; i++){
@@ -200,13 +163,13 @@ void Knee::VisualPortal::loadPortalTexture(std::vector<RenderableObject*>* rende
 		uint32_t inactiveTexture = (activeTexture+1) % 2;
 
 		// bind framebuffer to inactive texture
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffers[inactiveTexture]);
+		framebuffers[inactiveTexture]->bind();
 
 		// clear color + depth buffers		
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// use active texture
-		this->setTexture(textures[activeTexture]);
+		this->setTexture(framebuffers[activeTexture]->getTexture2D());
 
 		// render objects
 		for(uint32_t j = 0; j < renderableObjects->size(); j++){
@@ -239,7 +202,7 @@ void Knee::VisualPortal::loadPortalTexture(std::vector<RenderableObject*>* rende
 
 	// set our texture to whichever was rendered to last
 	// activeTexture because inactiveTexture is rendered to before being flipped to the activeTexture at the end of the for loop
-	this->setTexture(textures[activeTexture]);
+	this->setTexture(framebuffers[activeTexture]->getTexture2D());
 }
 
 void Knee::VisualPortal::draw(){

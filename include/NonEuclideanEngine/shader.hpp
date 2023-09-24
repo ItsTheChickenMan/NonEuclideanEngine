@@ -163,14 +163,13 @@ namespace Knee {
 		protected:
 			// texture to be used when rendering
 			Knee::Texture2D* m_texture;
-			
 		public:
 			RenderableObject(VertexData* vertexData, Texture2D* texture, RenderableObjectShaderProgram* program);
-
+			
 			RenderableObjectShaderProgram* getShaderProgram();
 			void setShaderProgram(RenderableObjectShaderProgram* program);
 
-			const Knee::VertexData* getVertexData() const;
+			const VertexData* getVertexData() const;
 
 			Knee::Texture2D* getTexture();
 			void setTexture(Knee::Texture2D* texture);

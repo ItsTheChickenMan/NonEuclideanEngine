@@ -3,7 +3,8 @@
 #include <SDL2/SDL_image.h>
 #include <iostream>
 
-// Texture //
+// -------------------- //
+// Texture2D //
 
 Knee::Texture2D::Texture2D(std::string filename){
 	SDL_Surface* surface = IMG_Load(filename.c_str());
@@ -15,7 +16,7 @@ Knee::Texture2D::Texture2D(std::string filename){
 	SDL_FreeSurface(surface);
 }
 
-Knee::Texture2D::Texture2D(uint32_t width, uint32_t height, GLenum type) {
+Knee::Texture2D::Texture2D(uint32_t width, uint32_t height) {
 	this->createGLTexture(GL_RGB, width, height, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 };
 
@@ -30,9 +31,7 @@ uint32_t Knee::Texture2D::getHeight(){
 }
 
 GLint Knee::Texture2D::SDLPixelFormatToInternalGLFormat(const SDL_PixelFormat* sdlFormat){
-	if (sdlFormat == nullptr) {
-		// Handle the case where sdlFormat is nullptr
-		// You can return a default format or throw an error as needed
+	if (sdlFormat == NULL) {
 		return -1;
 	}
 
@@ -49,15 +48,12 @@ GLint Knee::Texture2D::SDLPixelFormatToInternalGLFormat(const SDL_PixelFormat* s
 		case SDL_PIXELFORMAT_RGB24:
 			return GL_RGB;
 		default:
-			// Handle unsupported pixel formats or return a default format
 			return -1;
 	}
 }
 
 GLint Knee::Texture2D::SDLPixelFormatToGLFormat(const SDL_PixelFormat* sdlFormat){
-	if (sdlFormat == nullptr) {
-		// Handle the case where sdlFormat is nullptr
-		// You can return a default format or throw an error as needed
+	if (sdlFormat == NULL) {
 		return -1;
 	}
 
@@ -68,7 +64,6 @@ GLint Knee::Texture2D::SDLPixelFormatToGLFormat(const SDL_PixelFormat* sdlFormat
 		case SDL_PIXELFORMAT_RGB24:
 			return GL_RGB;
 		default:
-			// Handle unsupported pixel formats or return a default format
 			return -1;
 	}
 }
@@ -131,4 +126,38 @@ void Knee::Texture2D::createGLTexture(SDL_Surface* surface){
 
 GLint Knee::Texture2D::getGLTexture(){
 	return this->m_glTexture;
+}
+
+// -------------------- //
+// Framebuffer2D //
+
+Knee::Framebuffer2D::Framebuffer2D(uint32_t width, uint32_t height) : Texture2D(width, height) {
+	// create framebuffer
+	glGenFramebuffers(1, &this->m_framebuffer);
+
+	this->bind();
+
+	// bind to texture
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->getGLTexture(), 0);
+
+	// create renderbuffer for depth + stencil
+	glGenRenderbuffers(1, &this->m_framebuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, this->m_framebuffer); 
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);  
+
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, this->m_framebuffer);
+
+	// reset to default framebuffer + renderbuffer
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+Knee::Framebuffer2D::~Framebuffer2D(){}
+
+Knee::Texture2D* Knee::Framebuffer2D::getTexture2D(){
+	return static_cast<Knee::Texture2D*>(this);
+}
+
+void Knee::Framebuffer2D::bind(){
+	glBindFramebuffer(GL_FRAMEBUFFER, this->m_framebuffer);
 }

@@ -27,7 +27,7 @@ namespace Knee {
 			Texture2D(std::string);
 
 			// constructor for blank texture - just creates an empty gl texture given the desired values
-			Texture2D(uint32_t, uint32_t, GLenum);
+			Texture2D(uint32_t width, uint32_t height);
 
 			~Texture2D();
 
@@ -35,5 +35,23 @@ namespace Knee {
 			uint32_t getHeight();
 						
 			GLint getGLTexture();
+	};
+
+	// a texture which comes paired with a framebuffer + renderbuffer combo
+	// this by default does not allow loading from a file
+	class Framebuffer2D : public Texture2D {
+		uint32_t m_framebuffer;
+		uint32_t m_renderbuffer;
+
+		public:
+			Framebuffer2D(uint32_t width, uint32_t height);
+
+			~Framebuffer2D();
+			
+			// returns self usable as a texture
+			Texture2D* getTexture2D();
+
+			// binds the active framebuffer to itself
+			void bind();
 	};
 }

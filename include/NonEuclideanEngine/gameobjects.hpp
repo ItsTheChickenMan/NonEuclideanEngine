@@ -90,19 +90,11 @@ namespace Knee {
 		// a portal can also pair with itself, which is effectively the same as not existing at all (won't be rendered).  this can be useful for portals that you want to use as an output for another portal but you don't want to pair back (one way hallway sort of effect)
 		Knee::VisualPortal* m_pair;
 
-		// main rendering framebuffer + renderbuffer used for rendering the final portal texture
-		uint32_t m_mainFramebuffer;
-		uint32_t m_mainRenderbuffer;
-
-		// auxiliary framebuffer + renderbuffer used for rendering the world recursively when the portal has to visualize itself
-		uint32_t m_auxFramebuffer;
-		uint32_t m_auxRenderbuffer;
-
-		// secondary texture used for aux framebuffer
-		Knee::Texture2D* m_mainTexture;
+		// framebuffer used for primary rendering
+		Knee::Framebuffer2D* m_mainFramebuffer;
 		
-		// another secondary texture
-		Knee::Texture2D* m_auxTexture;
+		// framebuffer used to flip between when rendering ourselves
+		Knee::Framebuffer2D* m_auxFramebuffer;
 
 		public:
 			VisualPortal(Knee::VertexData* vertexData, uint32_t screenWidth, uint32_t screenHeight);
