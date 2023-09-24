@@ -167,24 +167,25 @@ int main(int argc, char* argv[]){
 	game->getGameObject( "myObject2" )->setPosition( glm::vec3(-20, 1.5, 0) );
 	game->getGameObject( "myObject3" )->setPosition( glm::vec3(-3 - 20, 1.5, 0) );
 
-	game->getPlayer()->setPosition( glm::vec3(0, 1.5, -4.5) );
-	
+	//game->getPlayer()->setPosition( glm::vec3(0, 1.5, -4.5) );
+	game->getPlayer()->setPosition( glm::vec3(0, 1.5, 0) );
+
 	// create visual portals
 	Knee::VisualPortal portal1(&portalVertexData, windowWidth, windowHeight);
 	Knee::VisualPortal portal2(&portalVertexData, windowWidth, windowHeight);
 
 	// assign properties
-	portal1.setPosition(glm::vec3(0, 2, -3));
-	portal1.setRotation(glm::vec3(0, glm::radians(0.f), 0));
+	portal1.setPosition(glm::vec3(0, 2, -4));
+	portal1.setRotation(glm::vec3(0, glm::radians(2.f), 0));
 	portal1.setScale(glm::vec3(8, 2, 2));
 
 	//portal2.setPosition(glm::vec3(-20, 3, -3));
 	//portal2.setRotation(glm::vec3(glm::radians(45.f), 0, 0));
 	//portal2.setScale(glm::vec3(0.5, 0.5, 0.5));
 
-	portal2.setPosition(glm::vec3(0, 2, 4));
-	portal2.setRotation(glm::vec3(0, glm::radians(0.f), 0));
-	portal2.setScale(glm::vec3(8, 2, 2));
+	portal2.setPosition(glm::vec3(0, 1.75, 4));
+	portal2.setRotation(glm::vec3(glm::radians(0.f), glm::radians(0.f), 0));
+	portal2.setScale(glm::vec3(8, 2, 2) * 0.75f);
 
 	// pair visual portals
 	portal1.pairVisualPortal(&portal2);
@@ -195,7 +196,7 @@ int main(int argc, char* argv[]){
 	game->addVisualPortal( "portal2", &portal2 );
 	
 	// misc settings
-	app.setMaxFPS(60);
+	app.setMaxFPS(120);
 	
 	double t = 0;
 	
@@ -215,7 +216,7 @@ int main(int argc, char* argv[]){
 		app.update();
 		
 		// print fps
-		//std::cout << "\r" << (uint32_t)app.getFPS() << "  ";
+		std::cout << "\r" << (uint32_t)app.getFPS() << "  ";
 	}
 	
 	std::cout << std::endl;

@@ -60,7 +60,7 @@ void Knee::Application::initialize(){
 	flags |= SDL_WINDOW_SHOWN;
 	flags |= SDL_WINDOW_OPENGL;
 	
-	this->m_window = SDL_CreateWindow(this->m_windowTitle.c_str(), 10, 10, this->m_windowWidth, this->m_windowHeight, flags);
+	this->m_window = SDL_CreateWindow(this->m_windowTitle.c_str(), 10, 30, this->m_windowWidth, this->m_windowHeight, flags);
 	
 	assert(this->m_window != NULL);
 	

@@ -9,6 +9,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <cmath>
 
 namespace Knee {	
 	// classes //
@@ -82,7 +83,14 @@ namespace Knee {
 		// higher the number --> greater the performance dip
 		// TODO: add checks to only recursively render if we're positive that we're looking at our own portal
 		// TODO: add checks to limit the amount of objects we have to re-render
-		const static uint32_t RECURSIVE_WORLD_RENDER_COUNT = 12;
+		const static uint32_t RECURSIVE_WORLD_RENDER_COUNT = 16; // 16 is a good number
+
+		// the brightness that the last recurse's portal should have
+		// setting this close to 0 will make the recursively rendered portals progressively darker the further they are from the actual portal
+		constexpr static float LAST_RECURSE_BRIGHTNESS = 0.5f;
+
+		// this is the actual brightness that each portal should be rendered with in order for the last portal to have a brightness of LAST_RECURSE_BRIGHTNESS
+		constexpr static float RECURSE_PORTAL_BRIGHTNESS = (float)pow(VisualPortal::LAST_RECURSE_BRIGHTNESS, 1.0 / (double)VisualPortal::RECURSIVE_WORLD_RENDER_COUNT);
 
 		// the paired portal used to determine what the camera should see when viewing this portal.  a paired portal does not have to pair with this portal in order to work
 		// a portal can also pair with itself, which is effectively the same as not existing at all (won't be rendered).  this can be useful for portals that you want to use as an output for another portal but you don't want to pair back (one way hallway sort of effect)
@@ -116,6 +124,8 @@ namespace Knee {
 			void draw();
 
 			bool isOwnPair();
+
+			void setBrightness(float brightness);
 	};
 
 

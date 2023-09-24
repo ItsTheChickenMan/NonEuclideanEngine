@@ -129,7 +129,7 @@ namespace Knee {
 			// update m_vpMatrix based on the current values of the projection and view matrices.
 			// this is called automatically whenever setPosition and setRotation are called.
 			void updateViewProjectionMatrix();
-			
+
 			void setPosition(glm::vec3);
 			void setRotation(glm::vec3);
 	};

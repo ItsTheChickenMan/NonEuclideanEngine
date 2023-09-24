@@ -459,12 +459,6 @@ void Knee::Camera::setRotation(glm::vec3 r){
 	// call general object setter
 	GeneralObject::setRotation(r);
 	
-	/*this->m_forward = glm::normalize(glm::vec3(
-		sin(r.y)*cos(r.x),
-		sin(r.x),
-		cos(r.y)*cos(r.x)
-	));*/
-	
 	// update vp
 	this->updateViewProjectionMatrix();
 }
