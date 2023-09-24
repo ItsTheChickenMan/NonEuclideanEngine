@@ -102,9 +102,6 @@ namespace Knee {
 	};
 	
 	class Camera : public GeneralObject {
-		// up vector
-		glm::vec3 m_up = glm::vec3(0, 1, 0); // TODO: will this ever need to be customized?
-		
 		glm::mat4 m_viewMatrix = glm::mat4(1);
 		
 		// (m_projectionMatrix * m_viewMatrix)
@@ -130,8 +127,8 @@ namespace Knee {
 			// this is called automatically whenever setPosition and setRotation are called.
 			void updateViewProjectionMatrix();
 
-			void setPosition(glm::vec3);
-			void setRotation(glm::vec3);
+			void setPosition(glm::vec3 position);
+			void setRotation(glm::vec3 rotation);
 	};
 	
 	class PerspectiveCamera : public Camera {
