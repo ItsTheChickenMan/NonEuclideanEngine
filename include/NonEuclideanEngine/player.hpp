@@ -1,6 +1,7 @@
 #pragma once
 
 #include <NonEuclideanEngine/misc.hpp>
+#include <NonEuclideanEngine/shader.hpp>
 #include <NonEuclideanEngine/gameobjects.hpp>
 
 #include <unordered_map>
@@ -105,12 +106,23 @@ namespace Knee {
 		// input handler
 		Knee::PlayerInputHandler m_inputHandler;
 		
+		// yaw axis
+		// in terms of rotation, the object's local y axis doesn't work for yaw like the local x axis does for pitch because it rotates sideways even when looking straight down, resulting in a sideways view.
+		// the intended effect is that the whole camera rotates about the forward vector, effectively creating gimbal lock (because yaw = roll in these cases)
+		// to account for this, we store a separate "yaw axis" separate but similar to the up axis.  
+		glm::vec3 m_yawAxis = glm::vec3(0, 1, 0);
+
+		// simple reference to the camera
+		Knee::PerspectiveCamera* m_camera;
+
 		public:
 			Player();
-			Player(double);
 			
 			Knee::PlayerInputHandler* getInputHandler();
 			
+			Knee::PerspectiveCamera* getCamera();
+			void setCamera(Knee::PerspectiveCamera* camera);
+
 			// returns true if mouse is locked, false otherwise.
 			// if the mouse isn't locked currently, it locks the mouse if the mouse has just been pressed
 			// if the mouse is locked currently, it unlocks it if KEYBIND_UNLOCK_CURSOR is pressed
@@ -125,11 +137,16 @@ namespace Knee {
 			// handles all player movement from keyboard presses
 			void handleKeyboard(double);
 			
+			// apply transformation override to update yaw axis
+			void applyTransformation(GeneralObject t);
+
 			// determines the player's desired "motion" vector based on their keypresses.  note that this is not guaranteed to translate into actual player motion
 			glm::vec3 getDesiredMotionVector();
 			
 			// updates movement from inputs, etc.
 			// automatically called during game updates
-			void update(double);
+			void handleMovement(double);
+
+			void update(double delta);
 	};
 }

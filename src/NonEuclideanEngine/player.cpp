@@ -1,5 +1,6 @@
 #include <NonEuclideanEngine/player.hpp>
 
+#include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/norm.hpp>
 
 // -------------------- //
@@ -133,10 +134,16 @@ const std::map<uint32_t, glm::vec3> Knee::Player::KEYBIND_MOTION_VECTORS = {
 
 Knee::Player::Player() : GameObject() {}
 
-Knee::Player::Player(double mass) : GameObject(mass) {} 
-
 Knee::PlayerInputHandler* Knee::Player::getInputHandler(){
 	return &this->m_inputHandler;
+}
+
+Knee::PerspectiveCamera* Knee::Player::getCamera(){
+	return this->m_camera;
+}
+
+void Knee::Player::setCamera(Knee::PerspectiveCamera* camera){
+	this->m_camera = camera;
 }
 
 bool Knee::Player::checkMouseLock(){
@@ -189,7 +196,13 @@ void Knee::Player::handleMouseMovement(){
 		// rotate
 		glm::vec2 mouseMotion = (float)this->m_mouseSensitivity * inputHandler->getMouseMotion() / 500.f;
 		
-		this->changeRotation( glm::vec3(mouseMotion.y, -mouseMotion.x, 0) );
+		glm::vec3 change = glm::vec3(mouseMotion.y, -mouseMotion.x, 0);
+
+		//std::cout << "yaw axis: " << glm::to_string(this->m_yawAxis) << std::endl;
+
+		// apply transformation
+		this->rotateAboutAxis(change.y, this->m_yawAxis);
+		this->rotateAboutAxis(change.x, this->getCrossVector());
 	}
 }
 
@@ -240,13 +253,31 @@ void Knee::Player::handleKeyboard(double delta){
 	
 	motionVector *= (float)this->m_playerSpeed * (sprinting ? this->m_sprintMultiplier : 1.0f);
 	
-	// apply delta
-	motionVector *= (float)delta;
-	
-	this->changePosition(motionVector);
+	if(inputHandler->getKeyState(SDL_SCANCODE_G)){
+		std::cout << "current player position: " << glm::to_string(this->getPosition()) << std::endl;
+		std::cout << "current player rotation: " << glm::to_string(this->getRotation()) << std::endl;
+	}
+
+	// set velocity
+	this->changeVelocity(motionVector);
 }
 
-void Knee::Player::update(double delta){
+void Knee::Player::applyTransformation(GeneralObject t){
+	glm::vec3 oldScale = this->getScale();
+	
+	// call parent
+	GeneralObject::applyTransformation(t);
+
+	// update yaw axis
+	Knee::GeneralObject obj(glm::vec3(0), glm::vec3(0, this->getRotation().y, this->getRotation().z), glm::vec3(1));
+
+	this->m_yawAxis = glm::vec3(obj.getRotationMatrix() * glm::vec4(0, 1, 0, 1));
+
+	// adjust max speed based on scaling
+	this->m_playerSpeed *= this->getScale().x / oldScale.x;
+}
+
+void Knee::Player::handleMovement(double delta){
 	// fetch input handler
 	Knee::PlayerInputHandler* inputHandler = this->getInputHandler();
 	
@@ -256,13 +287,18 @@ void Knee::Player::update(double delta){
 	this->handleMouseMovement();
 
 	// prevent player from looking behind themselves
-	this->lockXRotation();
+	//this->lockXRotation();
 	
 	// KEYBOARD MOVEMENT //
 	
 	// handle keypresses
 	this->handleKeyboard(delta);
-	
+}
+
+void Knee::Player::update(double delta){
 	// call base update
 	GameObject::update(delta);
+
+	// reset velocity
+	this->setVelocity(glm::vec3(0));
 }

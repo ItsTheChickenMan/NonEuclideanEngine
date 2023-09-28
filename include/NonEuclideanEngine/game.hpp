@@ -4,6 +4,7 @@
 #include <NonEuclideanEngine/shader.hpp>
 #include <NonEuclideanEngine/gameobjects.hpp>
 #include <NonEuclideanEngine/player.hpp>
+#include <NonEuclideanEngine/portal.hpp>
 
 #include <SDL2/SDL.h>
 #include <glm/glm.hpp>
@@ -38,8 +39,12 @@ namespace Knee {
 		// list of all renderable objects, added to whenever a type of renderable game object is added
 		std::vector<RenderableObject*> m_renderableGameObjects;
 		
-		// map of all visual portals, mapped by id
+		// vector of all visual portals
+		// portals themselves are stored as static game objects when mapped by id	
 		std::vector<VisualPortal*> m_visualPortals;
+
+		// vector of all portals
+		std::vector<Portal*> m_portals;
 
 		// shaders
 		Knee::RenderableObjectShaderProgram m_renderableGameObjectShaderProgram;
@@ -64,6 +69,7 @@ namespace Knee {
 			void addRenderableGameObject(std::string id, RenderableGameObject* obj);
 			
 			void addVisualPortal(std::string id, VisualPortal* portal);
+			void addPortal(std::string id, Portal* portal);
 
 			void updateGameObjects(double);
 			void updatePlayer(double);
@@ -71,9 +77,12 @@ namespace Knee {
 			// renders both static and non-static game objects
 			void renderAllRenderableGameObjects();
 			void updateVisualPortals();
+			bool updatePortals(double delta);
 
 			void renderScene();
-			
+
+			void update(double delta);
+
 			Knee::PerspectiveCamera* getPlayerCamera();
 			void updateCamera();
 			

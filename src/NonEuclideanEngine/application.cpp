@@ -77,7 +77,6 @@ void Knee::Application::initialize(){
 	// set viewport size
 	glViewport(0, 0, this->m_windowWidth, this->m_windowHeight);
 	
-	// enable vsync by default
 	this->setSwapInterval(0);
 	
 	// misc gl settings
@@ -212,15 +211,12 @@ void Knee::GameApplication::update(){
 	// get game instance
 	Knee::Game* game = this->getGameInstance();
 	
-	// update player
-	game->getPlayer()->update(delta);
+	// update game
+	game->update(delta);
 	
-	// update game objects
-	game->updateGameObjects(delta);
-	
-	// render scene
+	// render game scene
 	game->renderScene();
-	
+
 	// update buffer
 	this->updateWindow();
 	

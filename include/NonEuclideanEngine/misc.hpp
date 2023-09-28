@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include <iostream>
 #include <string>
@@ -37,6 +38,15 @@ namespace Knee {
 
 	// any object with a position, rotation, and scale in general 3D space.
 	class GeneralObject {
+		const static char TRANSLATION_CHAR = 't';
+		const static char ROTATION_CHAR = 'r';
+		const static char SCALE_CHAR = 's';
+
+		// note that these values always represent transformation in the "natural order" of scaling, then rotating, then translating.  this order results in these rules:
+		//
+		// position is relative to origin
+		// rotation is relative to local origin
+		// scale is relative to local origin
 		glm::vec3 m_position = glm::vec3(0);
 		glm::vec3 m_rotation = glm::vec3(0);
 		glm::vec3 m_scale = glm::vec3(1);
@@ -50,20 +60,22 @@ namespace Knee {
 		glm::mat4 m_modelMatrix = glm::mat4(1);
 		
 		public:
-			friend GeneralObject operator*(GeneralObject lhs, const GeneralObject& rhs){
-				Knee::GeneralObject out;
+			// constructors //
 
-				out.applyTransformation(rhs);
-				out.applyTransformation(lhs);
+			GeneralObject();
+			GeneralObject(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);
 
-				return out;
-			}
+			// transformation order getters/setters //
 			
-			GeneralObject& operator*=(const GeneralObject& rhs);
+			// returns a new GeneralObject representing a transformation in natural order equivalent to applying this transformation using the given transformation order
+			Knee::GeneralObject usingTransformationOrder(std::string transformationOrder);
 
-			void applyTransformation(GeneralObject t);
+			// this takes the existing transformation in the natural order, determines the resulting transformation from the provided transformationOrder, and then converts that transformation to natural order.
+			// note that this method is non invertible.  if you want to keep the original transformation, use usingTransformationOrder(std::string) instead to get a new GeneralObject with the transformation order applied
+			// note that calling with transformationOrder = "srt" or = "rst" does nothing, since both of these are natural orderings (srt is used by GeneralObject but rst has the same effect)
+			void setTransformationOrder(std::string transformationOrder);
 
-			void updateCachedValuesFromModelMatrix();
+			// position + rotation + scale getters/setters //
 
 			glm::vec3 getPosition() const ;
 			glm::vec3 getRotation() const ;
@@ -76,30 +88,86 @@ namespace Knee {
 			void changePosition(glm::vec3 change);
 			void changeRotation(glm::vec3 change);
 			void changeScale(glm::vec3 change);
-			
+
+			void rotateAboutAxis(double angle, glm::vec3 axis);
+
+			// GeneralObject operations //
+			void copyValues(GeneralObject other);
+
 			GeneralObject getInverseGeneralObject();
 			
 			void addGeneralObject(GeneralObject obj);
-			void subtractGeneralObject(GeneralObject obj);
+
+			virtual void applyTransformation(GeneralObject t);
+
+			friend GeneralObject operator*(GeneralObject lhs, const GeneralObject& rhs){
+				Knee::GeneralObject out;
+
+				out.applyTransformation(rhs);
+				out.applyTransformation(lhs);
+
+				return out;
+			}
+			
+			GeneralObject& operator*=(const GeneralObject& rhs);
+
+			// transformation matrix getters/setters //
 
 			glm::mat4 getTranslationMatrix();
 			glm::mat4 getRotationMatrix();
 			glm::mat4 getScaleMatrix();
-			
-			// get the direction that this object is currently pointing in
-			glm::vec3 getForwardVector();
-
-			// get the up direction of this object
-			glm::vec3 getUpVector();
 
 			void updateTranslationMatrix();
 			void updateRotationMatrix();
 			void updateScaleMatrix();
+
+			void applyRotationMatrix(glm::mat4 rotationMatrix);
 			
-			void updateModelMatrix();
+			// axes //
+
+			// get local x, y, z axes
+			// this is slightly faster for getting all 3 since it only needs to do matrix multiplication twice, then just uses cross product to get third vector
+			void getLocalAxes(glm::vec3& x, glm::vec3& y, glm::vec3& z);
+
+			// get the direction that this object is currently pointing in
+			glm::vec3 getLocalZAxis();
+
+			// get the up direction of this object
+			glm::vec3 getLocalYAxis();
+
+			// get the cross product of the forward and up vectors
+			glm::vec3 getLocalXAxis();
+
+			// alias for getLocalZAxis
+			glm::vec3 getForwardVector();
+
+			// alias for getLocalYAxis
+			glm::vec3 getUpVector();
+
+			// alias for getLocalXAxis
+			glm::vec3 getCrossVector();
+
+			// model matrix //
 
 			glm::mat4 getModelMatrix();
 
-			void applyMatrixTransformation(glm::mat4 model);
+			// based on the current values of the transformation matrices			
+			void updateModelMatrix();
+	};
+
+	class MathUtils {
+		public:
+			static bool isLineSegmentIntersectingPlane(const glm::vec3& start, const glm::vec3& end, 
+				const glm::vec3& planeCenter,
+				const glm::mat4& planeRotationMatrix,
+				const glm::vec3& planeSize
+			);
+
+			static bool approximatelyEqual(double v1, double v2, double threshold);
+	};
+
+	class StringUtils {
+		public:
+			static std::string reverse(std::string in);
 	};
 }

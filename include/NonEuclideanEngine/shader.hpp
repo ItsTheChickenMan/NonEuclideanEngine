@@ -106,7 +106,7 @@ namespace Knee {
 		
 		// (m_projectionMatrix * m_viewMatrix)
 		glm::mat4 m_vpMatrix = glm::mat4(1);
-		
+
 		protected:
 			// a copy of the matrices used to transform m_vpMatrix.  they're only used internally as a reference if the other is changed, but generally m_vpMatrix will be used for shaders so that the matrix multiplication of projection * view doesn't have to be done more than once per frame (unless necessary)
 			// projection matrix is public here because subclasses are expected to mess with it a bit, but not so much the view matrix.
@@ -115,6 +115,8 @@ namespace Knee {
 		
 		public:
 			Camera();
+			
+			GeneralObject* asGeneralObject();
 			
 			glm::mat4 getProjectionMatrix();
 			glm::mat4 getViewMatrix();
@@ -132,9 +134,19 @@ namespace Knee {
 	};
 	
 	class PerspectiveCamera : public Camera {
+		float m_near = 0.0;
+		float m_far = 0.0;
+		float m_fov = 0.0;
+		float m_aspectRatio = 0.0;
+
 		public:
 			PerspectiveCamera();
 			
+			float getNear();
+			float getFar();
+			float getFOV();
+			float getAspectRatio();
+
 			// automatically calls updateViewProjectionMatrix()
 			void setPerspectiveProperties(float fov, float aspectRatio, float near, float far);
 	};

@@ -24,10 +24,13 @@ const std::string Knee::Game::RENDERABLE_GAMEOBJECT_WITH_DEPTH_FRAGMENT_SHADER_P
 
 // TODO: these should definitely be customizable
 Knee::Game::Game(uint32_t windowWidth, uint32_t windowHeight) : 
-	m_renderableGameObjectShaderProgram(glm::radians(45.f), (float)windowWidth / (float)windowHeight, 0.1f, 200.f),
+	m_renderableGameObjectWithDepthShaderProgram(m_renderableGameObjectShaderProgram.getCamera()),  // link camera,
 	m_visualPortalShaderProgram(m_renderableGameObjectShaderProgram.getCamera()), // link camera
-	m_renderableGameObjectWithDepthShaderProgram(m_renderableGameObjectShaderProgram.getCamera())  // link camera
- {}
+	m_renderableGameObjectShaderProgram(glm::radians(45.f), (float)windowWidth / (float)windowHeight, 0.01f, 150.f)
+{
+	// link camera to player
+	this->m_player.setCamera(this->m_renderableGameObjectShaderProgram.getCamera());
+}
 
 Knee::Game::~Game(){
 	/*for(std::map<std::string, GameObject*>::iterator it = this->m_gameObjects.begin(); it != this->m_gameObjects.end(); ++it ){
@@ -179,6 +182,18 @@ void Knee::Game::addVisualPortal(std::string id, VisualPortal* portal){
 	portal->setShaderProgram(&this->m_visualPortalShaderProgram);
 }
 
+void Knee::Game::addPortal(std::string id, Portal* portal){
+	if(portal == NULL || id.length() < 1) return;
+
+	// push to portals
+	this->m_portals.push_back(portal);
+
+	// cast to visual portal
+	Knee::VisualPortal* visualPortal = portal->asVisualPortal();
+
+	this->addVisualPortal(id, visualPortal);
+}
+
 // NOTE: this resets the delta timer
 void Knee::Game::updateGameObjects(double delta){
 	// iterate through each game object & update
@@ -217,6 +232,21 @@ void Knee::Game::updateVisualPortals(){
 	}
 }
 
+bool Knee::Game::updatePortals(double delta){
+	for(uint32_t i = 0; i < this->m_portals.size(); i++){
+		// get portal
+		Portal* portal = this->m_portals.at(i);
+
+		// check player movement
+		if(portal->checkPlayer(this->getPlayer(), delta)){
+			// end early so we don't have the player moving through the same portal twice
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void Knee::Game::renderScene(){
 	glEnable(GL_DEPTH_TEST);
 
@@ -225,12 +255,29 @@ void Knee::Game::renderScene(){
 
 	// update camera with latest player position
 	this->updateCamera();
-	
-	// update portals
+
+	// update visual portal textures
 	this->updateVisualPortals();
 
 	// draw renderable objects
 	this->renderAllRenderableGameObjects();
+}
+
+void Knee::Game::update(double delta){
+	// physics //
+	
+	// handle player movement
+	this->getPlayer()->handleMovement(delta);
+
+	// update portals
+	bool moved = this->updatePortals(delta);
+
+	// move game objects
+	this->updateGameObjects(delta);
+
+	// update player
+	// NOTE: player isn't included in game object list, so this isn't redundant
+	this->updatePlayer(delta);
 }
 
 Knee::PerspectiveCamera* Knee::Game::getPlayerCamera(){

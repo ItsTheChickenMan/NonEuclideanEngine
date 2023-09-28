@@ -424,6 +424,10 @@ Knee::Camera::Camera(){
 	this->setRotation(glm::vec3(0));
 }
 
+Knee::GeneralObject* Knee::Camera::asGeneralObject(){
+	return static_cast<Knee::GeneralObject*>(this);
+}
+
 glm::mat4 Knee::Camera::getProjectionMatrix(){
 	return this->m_projectionMatrix;
 }
@@ -438,9 +442,9 @@ glm::mat4 Knee::Camera::getViewProjectionMatrix(){
 
 void Knee::Camera::updateViewMatrix(){
 	// calculate up vector
-	glm::vec3 up = this->getUpVector();
+	glm::vec3 up = this->getLocalYAxis();
 
-	this->m_viewMatrix = glm::lookAt(this->getPosition(), this->getPosition() + this->getForwardVector(), up);
+	this->m_viewMatrix = glm::lookAt(this->getPosition(), this->getPosition() + this->getLocalZAxis(), up);
 }
 
 void Knee::Camera::updateViewProjectionMatrix(){
@@ -472,8 +476,29 @@ void Knee::Camera::setRotation(glm::vec3 rotation){
 Knee::PerspectiveCamera::PerspectiveCamera() : Knee::Camera() {
 }
 
+float Knee::PerspectiveCamera::getNear(){
+	return this->m_near;
+}
+
+float Knee::PerspectiveCamera::getFar(){
+	return this->m_far;
+}
+
+float Knee::PerspectiveCamera::getFOV(){
+	return this->m_fov;
+}
+
+float Knee::PerspectiveCamera::getAspectRatio(){
+	return this->m_aspectRatio;
+}
+
 // fov is expected in radians
 void Knee::PerspectiveCamera::setPerspectiveProperties(float fov, float aspectRatio, float near, float far){
+	this->m_near = near;
+	this->m_far = far;
+	this->m_fov = fov;
+	this->m_aspectRatio = aspectRatio;
+
 	this->m_projectionMatrix = glm::perspective(fov, aspectRatio, near, far);
 	
 	// update vp
