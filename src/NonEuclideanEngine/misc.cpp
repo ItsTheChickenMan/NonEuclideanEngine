@@ -390,3 +390,80 @@ bool Knee::MathUtils::isLineSegmentIntersectingPlane(const glm::vec3& start, con
 bool Knee::MathUtils::approximatelyEqual(double v1, double v2, double threshold){
 	return std::abs(v1-v2) <= threshold;
 }
+
+bool Knee::MathUtils::pointIsInAABB(
+				const glm::vec2& point,
+				const glm::vec2& boxCenter,
+				const glm::vec2& boxSize
+			)
+{
+	return 	point.x >= boxSize.x - boxCenter.x/2.f &&
+			point.x <= boxSize.x + boxCenter.x/2.f &&
+			point.y >= boxSize.y - boxCenter.y/2.f &&
+			point.y <= boxSize.y + boxCenter.y/2.f;
+}
+
+// https://stackoverflow.com/a/3746601
+bool Knee::MathUtils::lineSegmentsIntersecting(
+				const glm::vec2& s1,
+				const glm::vec2& e1,
+				const glm::vec2& s2,
+				const glm::vec2& e2
+			)
+{
+	glm::vec2 b = e1 - s1;
+	glm::vec2 d = e2 - s2;
+
+	float bDotDPerp = b.x * d.y - b.y * d.x;
+
+	// if b dot d == 0, it means the lines are parallel so have infinite intersection points
+	if (bDotDPerp == 0)
+		return false;
+
+	glm::vec2 c = s2 - s1;
+	float t = (c.x * d.y - c.y * d.x) / bDotDPerp;
+	
+	if (t < 0 || t > 1)
+		return false;
+
+	float u = (c.x * b.y - c.y * b.x) / bDotDPerp;
+	
+	if (u < 0 || u > 1)
+		return false;
+
+	return true;
+}
+
+bool Knee::MathUtils::lineSegmentIntersectingOrWithinAABB(
+				const glm::vec2& s1,
+				const glm::vec2& e1,
+				const glm::vec2& boxCenter,
+				const glm::vec2& boxSize
+			)
+{
+	// check if at least one of the points is within the box, then return early
+	if(Knee::MathUtils::pointIsInAABB(s1, boxCenter, boxSize) || Knee::MathUtils::pointIsInAABB(e1, boxCenter, boxSize)){
+		return true;
+	}
+
+	// split AABB into line segments and run intersection tests
+	// if any pass then the test passes, otherwise fail
+	glm::vec2 vertices[] = {
+		boxCenter - boxSize / 2.f,
+		boxCenter + glm::vec2(boxSize.x, -boxSize.y)/2.f,
+		boxCenter + glm::vec2(-boxSize.x, boxSize.y)/2.f,
+		boxCenter + boxSize / 2.f
+	};
+	
+	for(uint32_t i = 0; i < 4; i++){
+		// get line segment
+		glm::vec2 start = vertices[i];
+		glm::vec2 end = vertices[(i+1)%4];
+
+		// check intersection
+		if(Knee::MathUtils::lineSegmentsIntersecting(s1, e1, start, end)) return true;
+	}
+
+	// no intersection :(
+	return false;
+}

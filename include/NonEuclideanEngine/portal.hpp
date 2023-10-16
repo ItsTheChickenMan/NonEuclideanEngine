@@ -25,7 +25,7 @@ namespace Knee {
 
 		// the paired portal used to determine what the camera should see when viewing this portal.  a paired portal does not have to pair with this portal in order to work
 		// a portal can also pair with itself, which is effectively the same as not existing at all (won't be rendered).  this can be useful for portals that you want to use as an output for another portal but you don't want to pair back (one way hallway sort of effect)
-		Knee::VisualPortal* m_pair;
+		Knee::VisualPortal* m_pair = NULL;
 
 		// TODO: it doesn't seem like there's any need to have two framebuffers per portal, might make more sense to have two global framebuffers
 			// however in the future this might make more sense when we have to render other portals through portals, so keeping this for now
@@ -47,10 +47,14 @@ namespace Knee {
 			// get the transformation required to move any object from their current position relative to this portal to the same position relative to the paired portal
 			Knee::GeneralObject getPairSpaceTransformation();
 
+			void getVertices(glm::vec3& topLeft, glm::vec3& topRight, glm::vec3& bottomLeft, glm::vec3& bottomRight);
+			bool isVisible(Knee::PerspectiveCamera* camera);
+
 			void loadPortalTexture(std::vector<RenderableObject*>* renderableObjects, Knee::RenderableObjectShaderProgram* renderableObjectShaderProgramWithDepth);
 
 			void draw();
 
+			bool hasPair();
 			bool isOwnPair();
 
 			void setBrightness(float brightness);

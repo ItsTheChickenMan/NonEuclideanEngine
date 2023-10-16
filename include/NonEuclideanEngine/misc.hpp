@@ -157,17 +157,38 @@ namespace Knee {
 
 	class MathUtils {
 		public:
+			// check if a 3D line segment is intersecting a 3D plane defined by a position, rotation matrix, and size
 			static bool isLineSegmentIntersectingPlane(const glm::vec3& start, const glm::vec3& end, 
 				const glm::vec3& planeCenter,
 				const glm::mat4& planeRotationMatrix,
 				const glm::vec3& planeSize
 			);
 
+			// check if two values are approximately equal to eachother given a threshold
 			static bool approximatelyEqual(double v1, double v2, double threshold);
-	};
 
-	class StringUtils {
-		public:
-			static std::string reverse(std::string in);
+			static bool pointIsInAABB(
+				const glm::vec2& point,
+				const glm::vec2& boxCenter,
+				const glm::vec2& boxSize
+			);
+
+			// check if a 2D line segment is intersecting another 2D line segment
+			// https://stackoverflow.com/a/3746601
+			static bool lineSegmentsIntersecting(
+				const glm::vec2& s1,
+				const glm::vec2& e1,
+				const glm::vec2& s2,
+				const glm::vec2& e2
+			);
+
+			// check if a 2D line segment is intersecting or within
+			// ALSO checks if AABB contains line segment, so not necessarily intersection
+			static bool lineSegmentIntersectingOrWithinAABB(
+				const glm::vec2& s1,
+				const glm::vec2& e1,
+				const glm::vec2& boxCenter,
+				const glm::vec2& boxSize
+			);
 	};
 }

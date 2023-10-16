@@ -155,7 +155,7 @@ int main(int argc, char* argv[]){
 	Knee::Game* game = app.getGameInstance();
 	
 	game->addRenderableGameObject( "myObject", new Knee::RenderableGameObject(&testVertexData, &testTexture) );
-	game->addRenderableGameObject( "myObject1", new Knee::RenderableGameObject(&testVertexData, &testTexture) );
+	//game->addRenderableGameObject( "myObject1", new Knee::RenderableGameObject(&testVertexData, &testTexture) );
 	game->addRenderableGameObject( "myObject2", new Knee::RenderableGameObject(&testVertexData, &testTexture2));
 	game->addRenderableGameObject( "myObject3", new Knee::RenderableGameObject(&testVertexData, &testTexture2));
 	game->addRenderableGameObject( "losernado", new Knee::RenderableGameObject(&testVertexData, &floorTexture) );
@@ -164,7 +164,7 @@ int main(int argc, char* argv[]){
 	loadMap(game, &testVertexData, &floorTexture, &wallTexture);
 	
 	game->getGameObject( "myObject" )->setPosition( glm::vec3(0, 1.5, 0) );
-	game->getGameObject( "myObject1" )->setPosition( glm::vec3(-3, 1.5, 0) );
+	//game->getGameObject( "myObject1" )->setPosition( glm::vec3(-3, 1.5, 0) );
 	game->getGameObject( "myObject2" )->setPosition( glm::vec3(-17, 2.0, 0) );
 	game->getGameObject( "myObject3" )->setPosition( glm::vec3(-17, 1.5, 0) );
 
@@ -172,33 +172,44 @@ int main(int argc, char* argv[]){
 	game->getGameObject( "losernado" )->setScale(glm::vec3(0.1, 0.1, 1));
 
 	//game->getPlayer()->setPosition( glm::vec3(0, 1.5, -4.5) );
-	game->getPlayer()->setPosition( glm::vec3(0, 1.5, 0) );
+	game->getPlayer()->setPosition( glm::vec3(-20, 1.5, 0) );
 
-	// create visual portals
+	// create portals
 	Knee::Portal portal1(&portalVertexData, windowWidth, windowHeight);
 	Knee::Portal portal2(&portalVertexData, windowWidth, windowHeight);
+	Knee::Portal portal3(&portalVertexData, windowWidth, windowHeight);
+	Knee::Portal portal4(&portalVertexData, windowWidth, windowHeight);
 
 	// assign properties
-	portal1.setPosition(glm::vec3(0, 2.5, -3));
+	portal1.setPosition(glm::vec3(-20, 2.5, -3));
 	portal1.setRotation(glm::vec3(0, glm::radians(0.f), 0));
-	portal1.setScale(glm::vec3(2, 3, 1));
+	portal1.setScale(glm::vec3(3, 3, 1));
 
-	//portal2.setPosition(glm::vec3(-20, 3, -3));
-	//portal2.setRotation(glm::vec3(glm::radians(45.f), 0, 0));
-	//portal2.setScale(glm::vec3(0.5, 0.5, 0.5));
-
-	portal2.setPosition(glm::vec3(0, 2, 3));
+	portal2.setPosition(glm::vec3(-20, 2.5, 3));
 	portal2.setRotation(glm::vec3(glm::radians(-0.f), glm::radians(0.f), 0));
-	portal2.setScale(glm::vec3(2, 3, 1));
+	portal2.setScale(glm::vec3(3, 3, 1));
+
+	portal3.setPosition(glm::vec3(3, 2.5, 0));
+	portal3.setRotation(glm::vec3(glm::radians(-0.f), glm::radians(90.f), 0));
+	portal3.setScale(glm::vec3(3, 3, 1));
+
+	portal4.setPosition(glm::vec3(-3, 2.5, 0));
+	portal4.setRotation(glm::vec3(glm::radians(-0.f), glm::radians(90.f), 0));
+	portal4.setScale(glm::vec3(3, 3, 1));
+
 
 	// pair visual portals
 	portal1.pair(&portal2);
+	//portal3.pair(&portal1);
 	portal2.pair(&portal1);
+	//portal4.pair(&portal2);
 
 	// add portals as game objects
 	game->addPortal( "portal1", &portal1 );
 	game->addPortal( "portal2", &portal2 );
-	
+	//game->addPortal( "portal3", &portal3 );
+	//game->addPortal( "portal4", &portal4 );
+
 	// misc settings
 	app.setMaxFPS(120);
 	
@@ -207,13 +218,13 @@ int main(int argc, char* argv[]){
 		double time = app.getDeltaTimer()->getTime();
 		double delta = app.getDeltaTimer()->getDelta();
 		
-		glm::vec3 intendedForward = glm::normalize(game->getPlayer()->getPosition() - game->getGameObject("myObject1")->getPosition());
+		//glm::vec3 intendedForward = glm::normalize(game->getPlayer()->getPosition() - game->getGameObject("myObject1")->getPosition());
 
 		// ( ͡° ͜ʖ ͡°)
 		//game->getGameObject( "myObject1" )->setRotation( glm::vec3(0, atan2(intendedForward.x, intendedForward.z), 0) );
 
 		game->getGameObject( "losernado" )->setRotation( game->getPlayer()->getRotation() );
-		game->getGameObject( "myObject1" )->setPosition( glm::vec3(-3 + sin( time*5.0 )*0.5, 1.5, 0) );
+		//game->getGameObject( "myObject1" )->setPosition( glm::vec3(-3 + sin( time*5.0 )*0.5, 1.5, 0) );
 		game->getGameObject( "myObject2" )->setPosition( glm::vec3( -17, 2.75 + sin(time*7.0)*0.25, 0) );
 		//game->getGameObject( "myObject" )->setRotation( glm::vec3(t, 0, 0) );
 		
@@ -227,13 +238,13 @@ int main(int argc, char* argv[]){
 
 		float scaleMag = 0.999f;
 
-		if(game->getPlayer()->getInputHandler()->getKeyState(SDL_SCANCODE_UP)){
+		/*if(game->getPlayer()->getInputHandler()->getKeyState(SDL_SCANCODE_UP)){
 			game->getStaticGameObject( "portal2" )->changeScale(glm::vec3(1) * (1.0f / scaleMag));
 		} else if(game->getPlayer()->getInputHandler()->getKeyState(SDL_SCANCODE_DOWN)){
 			game->getStaticGameObject( "portal2" )->changeScale(glm::vec3(1) * scaleMag);
-		}
+		}*/
 
-		game->getStaticGameObject( "portal2" )->setPosition(glm::vec3(0, 1 + game->getStaticGameObject("portal2")->getScale().y/2.f, 3));
+		//game->getStaticGameObject( "portal2" )->setPosition(glm::vec3(0, 1 + game->getStaticGameObject("portal2")->getScale().y/2.f, 3));
 
 		app.update();
 		

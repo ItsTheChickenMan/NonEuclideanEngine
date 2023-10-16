@@ -44,13 +44,143 @@ Knee::GeneralObject Knee::VisualPortal::getPairSpaceTransformation(){
 	return out;
 }
 
+void Knee::VisualPortal::getVertices(glm::vec3& topLeft, glm::vec3& topRight, glm::vec3& bottomLeft, glm::vec3& bottomRight){
+	glm::vec3 planeSize = glm::vec3(this->getScale().x, this->getScale().y, 0);
+
+	topLeft = -planeSize/2.f; // top left
+	topRight = topLeft + glm::vec3(planeSize.x, 0, 0); // top right
+	bottomRight = planeSize/2.f; // bottom right
+	bottomLeft = bottomRight - glm::vec3(planeSize.x, 0, 0); // bottom left
+
+	// rotate + translate
+	glm::mat4 rotationMatrix = this->getRotationMatrix();
+
+	topLeft = glm::vec3(rotationMatrix * glm::vec4(topLeft, 1));
+	topRight = glm::vec3(rotationMatrix * glm::vec4(topRight, 1));
+	bottomLeft = glm::vec3(rotationMatrix * glm::vec4(bottomLeft, 1));
+	bottomRight = glm::vec3(rotationMatrix * glm::vec4(bottomRight, 1));
+
+	topLeft += this->getPosition();
+	topRight += this->getPosition();
+	bottomLeft += this->getPosition();
+	bottomRight += this->getPosition();
+}
+
+bool Knee::VisualPortal::isVisible(Knee::PerspectiveCamera* camera){
+	// get portal vertices
+	glm::vec3 vertices[4];
+
+	this->getVertices(vertices[0], vertices[1], vertices[3], vertices[2]);
+
+	glm::vec3 ndc[4];
+
+	// transform to NDC and check for visiblity
+	for(uint32_t i = 0; i < 4; i++){
+		glm::vec4 v = camera->getViewProjectionMatrix() * glm::vec4(vertices[i], 1);
+
+		// perspective division
+		v /= v.w;
+
+		bool visible = true;
+
+		// check that v falls inside range of -1 to 1
+		for(uint32_t j = 0; j < 4; j++){
+			float c = v[j];
+
+			if(c < -1.0 || c > 1.0){
+				// vertex is visible, no need to continue
+				visible = false;
+				break;
+			}
+		}
+
+		if(visible) return true;
+
+		// store for use in other checks
+		ndc[i] = glm::vec3(v);
+	}
+
+	glm::vec3 ndcPosition = glm::vec3(0);
+	glm::vec3 ndcSize = glm::vec3(2, 2, 0);
+
+	// check that each of the four sections are satisfied for enveloping
+	bool envelopingCases[] = {false, false, false, false};
+
+	// check edges
+	// this also checks for enveloping, when no edges intersect but the entirety of NDC is within the portal's screen area
+	for(uint32_t i = 0; i < 4; i++){
+		glm::vec3 start = ndc[i];
+		glm::vec3 end = ndc[(i+1)%4];
+
+		if(Knee::MathUtils::lineSegmentIntersectingOrWithinAABB(
+			start, end,
+			ndcPosition,
+			ndcSize
+		)){
+			return true;
+		}
+
+		// check for enveloping
+		if(start.z > 0.0){
+			if(start.x <= -1.0 && start.y <= -1.0){
+				envelopingCases[0] = true;
+			} else if(start.x >= 1.0 && start.y <= -1.0){
+				envelopingCases[1] = true;
+			} else if(start.x <= -1.0 && start.y >= 1.0){
+				envelopingCases[2] = true;
+			} else if(start.x >= 1.0 && start.y >= 1.0){
+				envelopingCases[3] = true;
+			}
+		}
+	}
+
+	// check special enveloping case
+	bool enveloping = true;
+
+	for(uint32_t i = 0; (i < 4) && enveloping; i++){
+		enveloping &= envelopingCases[i];
+	}
+
+	if(enveloping){
+		return true;
+	}
+
+	// log coordinates
+	if(this->getPosition().z > 0){
+		std::cout << "(" << std::endl;
+
+		for(uint32_t i = 0; i < 4; i++){
+			std::cout << "\t" << ndc[i].x << ", " << ndc[i].y << "," << ndc[i].z << std::endl;
+		}
+
+		std::cout << ")\n" << std::endl;
+	}
+
+	return false;
+}
+
 // loads the texture for the visual portal so it can be used for rendering
 void Knee::VisualPortal::loadPortalTexture(std::vector<RenderableObject*>* renderableObjects, Knee::RenderableObjectShaderProgram* renderableObjectShaderProgramWithDepth){
 	// FIXME: sometimes there will be a frame of the scene from a weird angle, could be a lot of things but I'm assuming it stems from portals
 
+	// if we have no pair, do nothing
+	if(!this->hasPair()) return;
+
 	// if we're paired to ourselves, do nothing
 	if(this->isOwnPair()) return;
 	
+	// then, check that portal is on screen at all
+	// easy way to do this is transform all four vertices by mvp and check that at least one is within screen coords
+	
+	// get reference to camera
+	// this should be shared across all shader programs, so getting our own is okay
+	Knee::PerspectiveCamera* camera = this->getShaderProgram()->getCamera();
+
+	// check visibility, if not visible from camera then do nothing
+	if(!this->isVisible(camera)){
+		return;
+	}
+
 	// calculate camera movement transformation
 	Knee::GeneralObject pairSpaceTransformation = this->getPairSpaceTransformation();
 
@@ -72,10 +202,6 @@ void Knee::VisualPortal::loadPortalTexture(std::vector<RenderableObject*>* rende
 		transformations.push_back(totalTransformation);
 	}
 
-	// get reference to camera
-	// this should be shared across all shader programs, so getting our own is okay
-	Knee::PerspectiveCamera* camera = this->getShaderProgram()->getCamera();
-
 	Knee::GeneralObject cameraTransformation = *camera->asGeneralObject();
 
 	// apply transformation to camera
@@ -93,7 +219,7 @@ void Knee::VisualPortal::loadPortalTexture(std::vector<RenderableObject*>* rende
 	Knee::Framebuffer2D* framebuffers[] = {this->m_mainFramebuffer, this->m_auxFramebuffer};
 
 	// we run this for requested recurses + 1 times to make sure we render at least once
-	for(int32_t i = Knee::VisualPortal::RECURSIVE_WORLD_RENDER_COUNT; i >= 0; i--){
+	for(int32_t i = transformations.size()-1; i >= 0; i--){
 		// get inactive texture
 		uint32_t inactiveTexture = (activeTexture+1) % 2;
 
@@ -132,6 +258,7 @@ void Knee::VisualPortal::loadPortalTexture(std::vector<RenderableObject*>* rende
 		activeTexture = inactiveTexture;
 	}
 
+	camera->copyValues(cameraTransformation);
 	camera->updateViewProjectionMatrix();
 
 	// reset brightness
@@ -151,6 +278,10 @@ void Knee::VisualPortal::draw(){
 
 	// draw
 	RenderableStaticGameObject::draw();
+}
+
+bool Knee::VisualPortal::hasPair(){
+	return this->m_pair != NULL;
 }
 
 bool Knee::VisualPortal::isOwnPair(){

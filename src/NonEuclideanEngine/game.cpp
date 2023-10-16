@@ -26,7 +26,7 @@ const std::string Knee::Game::RENDERABLE_GAMEOBJECT_WITH_DEPTH_FRAGMENT_SHADER_P
 Knee::Game::Game(uint32_t windowWidth, uint32_t windowHeight) : 
 	m_renderableGameObjectWithDepthShaderProgram(m_renderableGameObjectShaderProgram.getCamera()),  // link camera,
 	m_visualPortalShaderProgram(m_renderableGameObjectShaderProgram.getCamera()), // link camera
-	m_renderableGameObjectShaderProgram(glm::radians(45.f), (float)windowWidth / (float)windowHeight, 0.01f, 150.f)
+	m_renderableGameObjectShaderProgram(glm::radians(45.f), (float)windowWidth / (float)windowHeight, 0.01f, 100.f)
 {
 	// link camera to player
 	this->m_player.setCamera(this->m_renderableGameObjectShaderProgram.getCamera());
